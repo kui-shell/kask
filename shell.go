@@ -48,7 +48,7 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 	metadata := shellPlugin.GetMetadata()
 	version := metadata.Version.String()
 
-	host := "http://localhost:8999/"
+	host := "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/"
 	archivePath := "shell-" + version + "-darwin.tar.gz"
 
 	url := host + archivePath
