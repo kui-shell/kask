@@ -16,6 +16,7 @@
 .project
 /out
 .vscode/*
+.idea/*
 node_modules/*
 
 # local testing binary
