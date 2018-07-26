@@ -3,7 +3,6 @@ language: go
 dist: trusty
 go:
   - 1.9.2
-node_js: 6
 addons:
   ssh_known_hosts: bluemix-cli-build.mybluemix.net
 env:
@@ -11,6 +10,7 @@ env:
     - REPO_SERVER=bluemix-cli-build.mybluemix.net
     - REPO_BASE=/home/builder/builds
     - REPO_USER=builder
+    - PLUGIN_VERSION=1.6.1
 install: true
 before_script:
   - node -v
@@ -19,5 +19,19 @@ before_script:
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - bin/build-all.sh
-  - go test .
-  - node bin/generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist/" "1.6.1"
+deploy:
+  - provider: script
+    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/dist/ ${PLUGIN_VERSION}
+    skip_cleanup: true
+    on:
+      branch: master
+  - provider: script
+    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/qa/dist/ ${PLUGIN_VERSION}
+    skip_cleanup: true
+    on:
+      branch: deploy_qa
+  - provider: script
+    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/prod/dist/ ${PLUGIN_VERSION}
+    skip_cleanup: true
+    on:
+      branch: deploy_prod
