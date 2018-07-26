@@ -13,8 +13,7 @@ install: true
 before_script:
   - node -v
   - sudo apt-get install lftp
-  - go get -u github.com/kardianos/govendor
-  - govendor sync
+  - go get
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - go test .
