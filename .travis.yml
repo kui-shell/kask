@@ -1,7 +1,9 @@
 group: bluezone
 language: go
+dist: trusty
 go:
   - 1.9.2
+node_js: 6
 addons:
   ssh_known_hosts: bluemix-cli-build.mybluemix.net
 env:
@@ -16,6 +18,6 @@ before_script:
   - go get
 script:
   - go vet $(go list ./... | grep -v "vendor")
-  - go test .
   - bin/build-all.sh
+  - go test .
   - node bin/generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist/" "1.6.1"
