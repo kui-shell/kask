@@ -2,12 +2,12 @@ const fs = require("fs");
 
 const args = process.argv;
 if (args.length < 4) {
-	console.error(`USAGE: node generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist/" "1.6.1"`);
+	console.error(`USAGE: node generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist" "1.6.1"`);
 	process.exit(1);
 }
 
-const host = args[2];
-const version = args[3];
+const hostArg = args[2];
+const versionArg = args[3];
 const inputFile = "./out/checksums";
 const outputFile = "./out/plugins.json";
 
@@ -20,6 +20,7 @@ const platformMap = {
 };
 
 function generate(host, version, inputFile) {
+	host = host.endsWith("/") ? host.substring(0, host.length -1) : host;
 	const json = {
 		"plugins": [
 			{
@@ -67,5 +68,5 @@ function createBinaries(host, version, inputFile) {
 	});
 }
 
-const json = generate(host, version, inputFile);
+const json = generate(hostArg, versionArg, inputFile);
 fs.writeFileSync(outputFile, JSON.stringify(json, null, 2));
