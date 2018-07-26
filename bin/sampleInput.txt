@@ -1,5 +1,0 @@
-88b5c757c533a2aabf3eff2c4b6549b46e13c5c5  /Users/ilanp/go/src/github.ibm.com/shell-cli/out/cloud-shell-darwin-amd64
-2e7196ed7affd5f2531b05b0236d2f3d1f91acf4  /Users/ilanp/go/src/github.ibm.com/shell-cli/out/cloud-shell-linux-386
-cd260d6aec23b5b234608ce409adbe1e589a9882  /Users/ilanp/go/src/github.ibm.com/shell-cli/out/cloud-shell-linux-amd64
-59d7ca6a97664b92ffc62e4b927771226bab566d  /Users/ilanp/go/src/github.ibm.com/shell-cli/out/cloud-shell-windows-386.exe
-c3a5bc68f6b950d85bb88e595b991343449a7ed4  /Users/ilanp/go/src/github.ibm.com/shell-cli/out/cloud-shell-windows-amd64.exe

@@ -1,80 +1,71 @@
+const fs = require("fs");
 
-const host = "s3-api.us-geo.objectstorage.softlayer.net"; // input
-const version = "1.6.1"; // intput
-const inputFile = '/Users/sarahb/go/src/cloud-shell-cli/bin/sampleInput.txt'; //input
+const args = process.argv;
+if (args.length < 4) {
+	console.error(`USAGE: node generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist/" "1.6.1"`);
+	process.exit(1);
+}
 
-function generate(host, version, inputfile, callback) {
-	const binaries = [];
-	const template = {
+const host = args[2];
+const version = args[3];
+const inputFile = "./out/checksums";
+const outputFile = "./out/plugins.json";
+
+const platformMap = {
+	"darwin-amd64": "osx",
+	"linux-amd64": "linux64",
+	"windows-amd64": "win64",
+	"windows-386": "win",
+	"linux-386": "linux"
+};
+
+function generate(host, version, inputFile) {
+	const json = {
 		"plugins": [
 			{
-				"name": "shell-test",
+				"name": "cloud-shell",
 				"aliases": null,
-				"description": "Shell test",
+				"description": "Cloud shell",
 				"created": "2016-01-14T00:00:00Z",
 				"updated": "2018-07-05T00:00:00Z",
 				"company": "IBM",
 				"homepage": "https://plugins.ng.bluemix.net",
 				"authors": [],
-				"versions": [
-				]
+				"versions": [createVersion(host, version, inputFile)]
 			}
 		]
 	};
+	return json;
+}
 
-	const platformMap = {
-		"darwin-amd64": "osx",
-		"linux-amd64": "linux64",
-		"windows-amd64": "win64",
-		"windows-386": "win",
-		"linux-386": "linux"
-	};
-	const versionTemplate = {
-		"version": "", //todo
-		"updated": "", //todo
+function createVersion(host, version, inputFile) {
+	return {
+		"version": version,
+		"updated": new Date(),
 		"doc_url": "",
 		"min_cli_version": "",
-		"binaries": [], //todo
 		"api_versions": null,
-		"releaseNotesLink": ""
+		"releaseNotesLink": "",
+		"binaries": createBinaries(host, version, inputFile)
 	};
-	var lineReader = require('readline').createInterface({
-		input: require('fs').createReadStream(inputfile)
-	});
+}
 
-	lineReader.on('line', function (line) {
+function createBinaries(host, version, inputFile) {
+	const lines = fs.readFileSync(inputFile, "utf-8").split('\n').filter(Boolean);
+	return lines.map((line) => {
 		const splitline = line.split(/[ ]+/);
 		const exarray = splitline[1].split("/");
 		const executable = exarray[exarray.length - 1];
 		const platforms = executable.match(/cloud-shell-(.*)/);
-		var platform = platforms ? platforms[1].split(".")[0] : "";
-		const url = `https://${host}/shelldist/dist/${version}/${executable}`;
-		binaries.push({
+		const platform = platforms ? platforms[1].split(".")[0] : "";
+		const url = `${host}/${version}/${executable}`;
+		return {
 			"platform": platformMap[platform] || platform,
 			"url": url,
 			"checksum": splitline[0]
-		});
-	});
-
-	lineReader.on('close', function () {
-		var output = template;
-		const shelltestPlugin = output.plugins.find((plugin) => plugin.name === "shell-test");
-		versionTemplate.version = version;
-		versionTemplate.updated = new Date();
-		versionTemplate.binaries.push(binaries);
-		shelltestPlugin.versions.push(versionTemplate);
-		shelltestPlugin.updated = new Date();
-		callback(null, output);
-	});
-
-	lineReader.on('err', function(err) {
-		callback(err);
+		};
 	});
 }
 
-generate(host, version, inputFile, (err, results) => {
-	if (err) {
-		console.log(err);
-	}
-	console.log(JSON.stringify(results));
-});
+const json = generate(host, version, inputFile);
+fs.writeFileSync(outputFile, JSON.stringify(json, null, 2));
