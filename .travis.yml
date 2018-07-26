@@ -18,13 +18,13 @@ script:
   - go test .
   - bin/build-all.sh
 deploy:
-- provider: script
-    script: bin/deploy.sh qa
-    skip_cleanup: true
-    on:
-      branch: deploy_qa
-- provider: script
-    script: bin/deploy.sh prod
-    skip_cleanup: true
-    on:
-      branch: deploy_prod
+  - provider: script
+      script: bin/deploy.sh qa
+      skip_cleanup: true
+      on:
+        branch: deploy_qa
+  - provider: script
+      script: bin/deploy.sh prod
+      skip_cleanup: true
+      on:
+        branch: deploy_prod
