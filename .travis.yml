@@ -11,6 +11,7 @@ env:
     - REPO_USER=builder
 install: true
 before_script:
+  - node -v
   - sudo apt-get install lftp
 script:
   - go vet $(go list ./... | grep -v "vendor")
