@@ -3,7 +3,6 @@ language: go
 dist: trusty
 go:
   - 1.9.2
-node_js: 6
 addons:
   ssh_known_hosts: bluemix-cli-build.mybluemix.net
 env:
