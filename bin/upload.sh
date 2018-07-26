@@ -6,7 +6,6 @@ readonly OUT_DIR=$ROOT_DIR/out
 VERSION=$1
 URL=$2
 IAM_TOKEN=$3
-URL="$2"
 
 for file in "$OUT_DIR"/*
 do
