@@ -28,3 +28,4 @@ CGO_ENABLED=0 build linux ppc64le
 build darwin amd64
 
 shasum $OUT_DIR/*
+shasum $OUT_DIR/* > $OUT_DIR/checksums

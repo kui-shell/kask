@@ -18,3 +18,4 @@ script:
   - go vet $(go list ./... | grep -v "vendor")
   - go test .
   - bin/build-all.sh
+  - node bin/generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist/" "1.6.1"
