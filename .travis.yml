@@ -11,19 +11,10 @@ env:
     - REPO_USER=builder
 install: true
 before_script:
+  - node -v
   - sudo apt-get install lftp
+  - go get
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - go test .
   - bin/build-all.sh
-deploy:
-- provider: script
-    script: bin/deploy.sh qa
-    skip_cleanup: true
-    on:
-      branch: deploy_qa
-- provider: script
-    script: bin/deploy.sh prod
-    skip_cleanup: true
-    on:
-      branch: deploy_prod
