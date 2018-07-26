@@ -22,17 +22,17 @@ script:
 
 deploy:
   - provider: script
-      script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/dist/ ${PLUGIN_VERSION}
+      script: "bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/dist/ ${PLUGIN_VERSION}"
       skip_cleanup: true
       on:
         branch: master
   - provider: script
-      script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/qa/dist/ ${PLUGIN_VERSION}
+      script: "bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/qa/dist/ ${PLUGIN_VERSION}"
       skip_cleanup: true
       on:
         branch: deploy_qa
   - provider: script
-      script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/prod/dist/ ${PLUGIN_VERSION}
+      script: "bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/prod/dist/ ${PLUGIN_VERSION}"
       skip_cleanup: true
       on:
         branch: deploy_prod
