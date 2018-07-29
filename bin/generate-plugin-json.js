@@ -121,7 +121,7 @@ getIAMToken((err, response) => {
 		console.log("error parsing iam-token response");
 		return;
 	}
-	accessToken  = body.access_token;
+	accessToken = body.access_token;
 	const json = generate(hostArg, versionArg, inputFile);
 	fs.writeFileSync(outputFile, JSON.stringify(json, null, 2));
 });
