@@ -3,7 +3,7 @@ const request = require("request");
 
 const args = process.argv;
 if (args.length < 4) {
-	console.error(`USAGE: node generate-plugin-json.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist" "1.6.1" "api-key"`);
+	console.error(`USAGE: node gen-and-update-plugins.js "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dist" "1.6.1" "api-key"`);
 	process.exit(1);
 }
 
@@ -125,4 +125,5 @@ getIAMToken((err, response) => {
 	accessToken = body.access_token;
 	const json = generate(hostArg, versionArg, inputFile);
 	uploadToCOS(hostArg +"/plugins.json", JSON.stringify(json, null, 2), false);
+	return;
 });
