@@ -65,7 +65,7 @@ function createBinaries(host, version, inputFile) {
 			"checksum": splitline[1]
 		};
 	    uploadExecutable(response.url, fs.readFileSync(`../out/cloud-shell-${platform}${splitline[4] || ""}`));
-		return response
+		return response;
 	});
 }
 
