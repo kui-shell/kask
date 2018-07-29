@@ -14,7 +14,6 @@ env:
 install: true
 before_script:
   - node -v
-  - npm install -g request
   - sudo apt-get install lftp
   - go get
 script:
