@@ -64,7 +64,7 @@ function createBinaries(host, version, inputFile) {
 			"url": `${host}/${version}/cloud-shell-${platform}-${version}${splitline[4] || ""}`,
 			"checksum": splitline[1]
 		};
-		uploadToCOS(response.url, fs.readFileSync(`../out/cloud-shell-${platform}${splitline[4] || ""}`), true);
+		uploadToCOS(response.url, fs.readFileSync(`./out/cloud-shell-${platform}${splitline[4] || ""}`), true);
 		return response;
 	});
 }
