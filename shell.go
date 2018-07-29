@@ -2,20 +2,26 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
-	"os"
-	"os/exec"
-	"strings"
-	"github.com/mholt/archiver"
+	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/trace"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/downloader"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/trace"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin"
+	"github.com/mholt/archiver"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
 type CloudShellPlugin struct{}
 
 func main() {
+	argsWithoutProg := os.Args[1:]
+	if len(argsWithoutProg) > 0 && argsWithoutProg[0] == "version" {
+		version := GetVersion()
+		fmt.Println(version.String())
+		return
+	}
 	plugin.Start(new(CloudShellPlugin))
 }
 
@@ -52,7 +58,7 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 	archivePath := "shell-" + version + "-darwin.tar.gz"
 
 	url := host + archivePath
-	targetDir := filepath.Join(context.PluginDirectory(), "/cache-" + version)
+	targetDir := filepath.Join(context.PluginDirectory(), "/cache-"+version)
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	command := filepath.Join(extractedDir, "shell/bin/fsh")
@@ -95,12 +101,8 @@ func MakeExecutable(path string) error {
 
 func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
-		Name: "shell",
-		Version: plugin.VersionType{
-			Major: 1,
-			Minor: 6,
-			Build: 1,
-		},
+		Name:    "shell",
+		Version: GetVersion(),
 		Commands: []plugin.Command{
 			{
 				Name:        "shell",
@@ -109,5 +111,13 @@ func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 				Usage:       "ibmcloud shell",
 			},
 		},
+	}
+}
+
+func GetVersion() plugin.VersionType {
+	return plugin.VersionType{
+		Major: 1,
+		Minor: 6,
+		Build: 1,
 	}
 }
