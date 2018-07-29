@@ -23,7 +23,6 @@ const platformMap = {
 };
 
 function generate(host, version, inputFile) {
-	host = host.endsWith("/") ? host.substring(0, host.length -1) : host;
 	const json = {
 		"plugins": [
 			{
@@ -123,7 +122,8 @@ getIAMToken((err, response) => {
 		return;
 	}
 	accessToken = body.access_token;
-	const json = generate(hostArg, versionArg, inputFile);
-	uploadToCOS(hostArg +"/plugins.json", JSON.stringify(json, null, 2), false);
+	const host = hostArg.endsWith("/") ? hostArg.substring(0, hostArg.length -1) : hostArg;
+	const json = generate(host, versionArg, inputFile);
+	uploadToCOS(`${host}/bx/list`, JSON.stringify(json, null, 2), false);
 	return;
 });
