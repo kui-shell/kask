@@ -14,11 +14,13 @@ env:
 install: true
 before_script:
   - node -v
+  - pushd bin && npm install && popd
   - sudo apt-get install lftp
   - go get
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - bin/build-all.sh
+  - bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/ ${PLUGIN_VERSION} ${COS_API_KEY}
 deploy:
   - provider: script
     script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/ ${PLUGIN_VERSION} ${COS_API_KEY}

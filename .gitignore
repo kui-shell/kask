@@ -18,6 +18,7 @@
 .vscode/*
 .idea/*
 node_modules/*
+bin/node_modules/*
 
 # local testing binary
 shell
