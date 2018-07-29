@@ -64,7 +64,7 @@ function createBinaries(host, version, inputFile) {
 			"url": `${host}/${version}/cloud-shell-${platform}-${version}${splitline[4] || ""}`,
 			"checksum": splitline[1]
 		};
-	    uploadExecutable(response.url, fs.readFileSync(`../out/cloud-shell-${platform}${splitline[4] || ""}`));
+		uploadToCOS(response.url, fs.readFileSync(`../out/cloud-shell-${platform}${splitline[4] || ""}`), true);
 		return response;
 	});
 }
@@ -85,26 +85,27 @@ function getIAMToken(callback) {
 }
 
 
-function uploadExecutable(url, binary) {
-	if (binary) {
-		request.put({
-			url: url,
-			headers: {
-				"x-amz-acl": "public-read",
-				"Authorization": `Bearer ${accessToken}`,
-				"Content-Type": "application/octet-stream",
-			},
-			body: binary,
-			encoding: null
-		}, (err, response) => {
-			if (err || response.statusCode != 200) {
-				console.log("failed to upload " + url);
-				console.log(err || response.statusCode);
-				return;
-			}
-			console.log(response.statusCode + " on upload of " + url);
-		});
+function uploadToCOS(url, data, isBinary) {
+	const options = {
+		url: url,
+		headers: {
+			"x-amz-acl": "public-read",
+			"Authorization": `Bearer ${accessToken}`,
+			"Content-Type": "application/octet-stream",
+		},
+		body: data
+	};
+	if (isBinary) {
+		options.encoding = null;
 	}
+	request.put(options, (err, response) => {
+		if (err || response.statusCode != 200) {
+			console.log("failed to upload " + url);
+			console.log(err || response.statusCode);
+			return;
+		}
+		console.log(response.statusCode + " on upload of " + url);
+	});
 }
 
 
@@ -123,5 +124,5 @@ getIAMToken((err, response) => {
 	}
 	accessToken = body.access_token;
 	const json = generate(hostArg, versionArg, inputFile);
-	fs.writeFileSync(outputFile, JSON.stringify(json, null, 2));
+	uploadToCOS(hostArg +"/plugins.json", JSON.stringify(json, null, 2), false);
 });
