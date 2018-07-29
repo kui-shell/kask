@@ -14,6 +14,7 @@ env:
 install: true
 before_script:
   - node -v
+  - pushd bin && npm install && popd
   - sudo apt-get install lftp
   - go get
 script:
