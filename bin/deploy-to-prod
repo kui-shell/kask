@@ -34,7 +34,7 @@ elif [[ "${data[1]}" != "passed:" ]]; then
   exit 1
 fi
 
-echo "Deploying to US-South ..."
+echo "Deploying to Prod ..."
 git push -q origin origin/deploy_qa:deploy_prod
 #actual deployment will be performed by Travis
 
