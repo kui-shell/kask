@@ -1,0 +1,61 @@
+#!/usr/bin/env bash -eu
+
+force=""
+while getopts f opt; do
+  [[ $opt == "f" ]] && force="f"
+done
+
+if [[ -z $GITHUB_TOKEN ]]; then
+  >&2 echo '$GITHUB_TOKEN must be set'
+  exit 1
+fi
+
+which ruby>/dev/null || echo "> Please install Ruby <"
+which travis>/dev/null || gem install travis --no-rdoc --no-ri --user-install
+
+git fetch -q
+if [ $(git rev-parse origin/deploy_qa) = $(git rev-parse origin/deploy_prod) ]; then
+  echo "Current QA is already deployed to Production"
+  exit
+fi
+
+echo "Fetching data from Travis ..."
+travis endpoint -e https://travis.ibm.com/api --set-default --no-interactive
+travis login -I -g $GITHUB_TOKEN --no-interactive
+
+#check the status of the last build
+data=($(travis history -b deploy_qa -l1))
+
+if [ $force ]; then
+  echo "-f ignoring QA build status"
+elif [[ "${data[1]}" != "passed:" ]]; then
+  >&2 echo "Build ${data[0]} ${data[1]} abandoning deployment."
+  >&2 echo "Deployment can be forced with -f."
+  exit 1
+fi
+
+echo "Deploying to US-South ..."
+git push -q origin origin/deploy_qa:deploy_prod
+#actual deployment will be performed by Travis
+
+repository=cloud-shell-cli
+tag=$(git describe origin/deploy_qa --tags)
+name=$(date -u '+%F %T')
+echo "Creating GitHub release $name for $tag in $repository ..."
+response=$(
+  curl -X POST -sSw %{http_code} -d@- https://github.ibm.com/api/v3/repos/composer/$repository/releases?access_token=$GITHUB_TOKEN <<JSON
+  {"tag_name": "$tag", "name": "$name"}
+JSON
+)
+status=${response##*$'\n'}
+#response code not beginning with 2 is assumed to be an error
+if [[ ${status:0:1} != "2" ]]; then
+  >&2 echo "Creating GitHub release failed with $status :-("
+  >&2 echo "${response%$'\n'*}"
+else
+  #print the URL to the release
+  echo "$response" | awk '$1 == "\"html_url\":" {print substr($2, 2, length($2)-3);exit}'
+fi
+
+echo "It may take a minute for Travis to notice the deployment."
+echo "https://travis.ibm.com/composer/$repository/requests"
