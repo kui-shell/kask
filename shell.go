@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/terminal"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/trace"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/downloader"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
@@ -66,14 +67,15 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	command := filepath.Join(extractedDir, "shell/bin/fsh")
-
 	if !file_helpers.FileExists(successFile) {
 		downloadedFile := filepath.Join(targetDir, "downloaded.tar.gz")
 		extractedDir := filepath.Join(targetDir, "extract")
 
 		os.MkdirAll(extractedDir, 0700)
 
+		ui := terminal.NewStdUI()
 		fileDownloader := new(downloader.FileDownloader)
+		fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
 		trace.Logger.Println("Downloading shell to " + downloadedFile)
 		fileDownloader.DownloadTo(url, downloadedFile)
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)

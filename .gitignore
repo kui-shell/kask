@@ -20,5 +20,6 @@
 node_modules/*
 bin/node_modules/*
 
-# local testing binary
+# local testing binaries
 shell
+shell-cli
