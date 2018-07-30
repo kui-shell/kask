@@ -20,12 +20,10 @@ script:
   - go vet $(go list ./... | grep -v "vendor")
   - bin/build-all.sh
   - export PLUGIN_VERSION=`out/cloud-shell-linux-amd64 version`
-  #- bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/ ${PLUGIN_VERSION} ${COS_API_KEY}
   - echo "Plugin version is ${PLUGIN_VERSION}"
 deploy:
   - provider: script
-    script: echo "On deploy Plugin version is ${PLUGIN_VERSION}"
-    #script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/ ${PLUGIN_VERSION} ${COS_API_KEY}
+    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/ ${PLUGIN_VERSION} ${COS_API_KEY}
     skip_cleanup: true
     on:
       branch: master
