@@ -12,9 +12,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"strconv"
 )
 
 type CloudShellPlugin struct{}
+
+// THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
+const PLUGIN_VERSION = "1.6.1"
 
 func main() {
 	argsWithoutProg := os.Args[1:]
@@ -116,10 +120,16 @@ func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
+func ToInt(in string) int {
+	outValue, _ := strconv.Atoi(in)
+	return outValue
+}
+
 func GetVersion() plugin.VersionType {
+	s := strings.Split(PLUGIN_VERSION, ".")
 	return plugin.VersionType{
-		Major: 1,
-		Minor: 6,
-		Build: 1,
+		Major: ToInt(s[0]),
+		Minor: ToInt(s[1]),
+		Build: ToInt(s[2]),
 	}
 }
