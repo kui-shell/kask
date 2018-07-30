@@ -7,6 +7,7 @@ import (
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/downloader"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin"
+	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/terminal"
 	"github.com/mholt/archiver"
 	"os"
 	"os/exec"
@@ -56,6 +57,7 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 }
 
 func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext) string {
+	ui := terminal.NewStdUI()
 	metadata := shellPlugin.GetMetadata()
 	version := metadata.Version.String()
 
@@ -77,18 +79,28 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 		fileDownloader := new(downloader.FileDownloader)
 		fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
 		trace.Logger.Println("Downloading shell to " + downloadedFile)
-		fileDownloader.DownloadTo(url, downloadedFile)
+		if _, _, err := fileDownloader.DownloadTo(url, downloadedFile); err != nil {
+			return handleError(err, ui)
+		}
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)
 
 		trace.Logger.Println("Extracting shell to " + extractedDir)
-		archiver.TarGz.Open(downloadedFile, extractedDir)
+		if err := archiver.TarGz.Open(downloadedFile, extractedDir); err != nil {
+			return handleError(err, ui)
+		}
 		trace.Logger.Println("Extracted shell to " + extractedDir)
 
-		MakeExecutable(command)
+		if err := MakeExecutable(command); err != nil {
+			return handleError(err, ui)
+		}
 		distDir := filepath.Join(extractedDir, "shell/dist")
-		MakeExecutable(distDir)
+		if err := MakeExecutable(distDir); err != nil{
+			return handleError(err, ui)
+		}
 
-		os.OpenFile(successFile, os.O_RDONLY|os.O_CREATE, 0666)
+		if _, err := os.OpenFile(successFile, os.O_RDONLY|os.O_CREATE, 0666); err != nil {
+			return handleError(err, ui)
+		}
 	} else {
 		trace.Logger.Println("Using cached download")
 	}
@@ -118,6 +130,19 @@ func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 			},
 		},
 	}
+}
+
+
+func handleError(err error, ui terminal.UI) string {
+	switch err {
+	case nil:
+		return ""
+	default:
+		ui.Failed(err.Error())
+		os.Exit(1)
+	}
+
+	return ""
 }
 
 func ToInt(in string) int {
