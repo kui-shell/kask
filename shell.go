@@ -7,7 +7,6 @@ import (
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/downloader"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/terminal"
 	"github.com/mholt/archiver"
 	"os"
 	"os/exec"
@@ -33,7 +32,6 @@ func main() {
 
 func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []string) {
 	trace.Logger = trace.NewLogger(context.Trace())
-
 	command := shellPlugin.DownloadDistIfNecessary(context)
 
 	shellArgs := args[1:]
@@ -75,7 +73,6 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 
 		os.MkdirAll(extractedDir, 0700)
 
-		ui := terminal.NewStdUI()
 		fileDownloader := new(downloader.FileDownloader)
 		fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
 		trace.Logger.Println("Downloading shell to " + downloadedFile)
