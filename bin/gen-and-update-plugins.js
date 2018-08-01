@@ -26,7 +26,7 @@ function generate(host, version, inputFile) {
 	const json = {
 		"plugins": [
 			{
-				"name": "cloud-shell",
+				"name": "function-composer",
 				"aliases": null,
 				"description": "Cloud shell",
 				"created": "2016-01-14T00:00:00Z",
@@ -56,14 +56,14 @@ function createVersion(host, version, inputFile) {
 function createBinaries(host, version, inputFile) {
 	const lines = fs.readFileSync(inputFile, "utf-8").split('\n').filter(Boolean);
 	return lines.map((line) => {
-		const splitline = line.match(/(^\S*).*\/cloud-shell-(.*)-([^\.]*)(\.exe)*$/);
+		const splitline = line.match(/(^\S*).*\/function-composer-(.*)-([^\.]*)(\.exe)*$/);
 		const platform = `${splitline[2]}-${splitline[3]}`;
 		const response = {
 			"platform": platformMap[platform] || platform,
-			"url": `${host}/${version}/cloud-shell-${platform}-${version}${splitline[4] || ""}`,
+			"url": `${host}/${version}/function-composer-${platform}-${version}${splitline[4] || ""}`,
 			"checksum": splitline[1]
 		};
-		uploadToCOS(response.url, fs.readFileSync(`./out/cloud-shell-${platform}${splitline[4] || ""}`), true);
+		uploadToCOS(response.url, fs.readFileSync(`./out/function-composer-${platform}${splitline[4] || ""}`), true);
 		return response;
 	});
 }

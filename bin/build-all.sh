@@ -12,11 +12,11 @@ build() {
     arch=$2
     GOARCH=$arch GOOS=$os $ROOT_DIR/bin/build.sh
 
-    nf="cloud-shell-$os-$arch"
+    nf="function-composer-$os-$arch"
     if [ $os == "windows" ]; then
         nf="$nf.exe"
     fi
-    mv $OUT_DIR/cloud-shell "$OUT_DIR/$nf"
+    mv $OUT_DIR/function-composer "$OUT_DIR/$nf"
 }
 
 build windows amd64
@@ -24,7 +24,7 @@ build windows 386
 # disable CGO for Linux
 CGO_ENABLED=0 build linux amd64
 CGO_ENABLED=0 build linux 386
-CGO_ENABLED=0 build linux ppc64le
+#CGO_ENABLED=0 build linux ppc64le
 build darwin amd64
 
 shasum $OUT_DIR/*
