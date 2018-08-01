@@ -2,12 +2,11 @@
 
 # Get started
 
-You firstly need [Go](http://www.golang.org) installed on your machine, and set up a [GOPATH](http://golang.org/doc/code.html#GOPATH). Then clone this repository into `$GOPATH/src/github.ibm.com/shell-cli`. 
+You firstly need [Go](http://www.golang.org) installed on your machine, and set up a [GOPATH](http://golang.org/doc/code.html#GOPATH). Then clone this repository into `$GOPATH/src/github.ibm.com/composer/cloud-shell-cli`. 
 
-This project uses [govendor](https://github.com/kardianos/govendor) to manage dependencies. Go to the project directory and run the following command to restore the dependencies into vendor folder:
-
+Pull in the required dependencies (at some point, may switch to govendor)
 ```bash
-$ govendor sync
+$ go get
 ```
 
 and then run tests:
@@ -29,7 +28,7 @@ $ go build shell.go
 Install the plugin:
 
 ```bash
-$ bluemix plugin install ./shell
+$ bluemix plugin install ./cloud-shell-cli
 ```
 
 # Use the plugin
@@ -43,59 +42,15 @@ ibmcloud shell host get
 ibmcloud fsh shell
 ```
 
-# Create a plugin repo in object storage for testing:
+# CI Process
 
-First, create a file called list that looks like this:
-```
-{
-  "plugins": [{
-    "name": "shell-test",
-    "aliases": null,
-    "description": "Shell test",
-    "created": "2016-01-14T00:00:00Z",
-    "updated": "2018-07-05T00:00:00Z",
-    "company": "IBM",
-    "homepage": "https://plugins.ng.bluemix.net",
-    "authors": [],
-    "versions": [
-    {
-      "version": "1.6.1",
-      "updated": "2016-01-28T00:00:00Z",
-      "doc_url": "",
-      "min_cli_version": "",
-      "binaries": [
-        {
-          "platform": "osx",
-          "url": "https://plugins.ng.bluemix.net/downloads/bluemix-plugins/auto-scaling/auto-scaling-darwin-amd64-0.2.1",
-          "checksum": "52947857a431afafb88882d6683e86927871d738"
-        },
-        {
-          "platform": "win64",
-          "url": "https://plugins.ng.bluemix.net/downloads/bluemix-plugins/auto-scaling/auto-scaling-windows-amd64-0.2.1.exe",
-          "checksum": "79ba07cadedc32ec1eb25c954a9b29f870b25e49"
-        },
-        {
-          "platform": "linux64",
-          "url": "https://plugins.ng.bluemix.net/downloads/bluemix-plugins/auto-scaling/auto-scaling-linux-amd64-0.2.1",
-          "checksum": "fa3529990ca233f20cba6d89b3d871d56bef41d9"
-        }
-      ],
-      "api_versions": null,
-      "releaseNotesLink": ""
-    }
-  ]
-  }]
-}
-```
+See https://github.ibm.com/composer/cloud-shell-cli/wiki/Travis-Build-&-Deployment
 
-Then upload it to a COS bucket, making it public using this command:
-```
-curl -X "PUT" "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/bx/list" -H "x-amz-acl: public-read" -H "Authorization: $IAM_TOKEN" -H "Content-Type: application/json" -d@"list"
-```
+When PR is merged into master, the CLI "repo" will be available at `https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev`
 
-Then add the repo:
+To test, add the repo:
 ```
-bluemix plugin repo-add shell-dev-repo https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/
+bluemix plugin repo-add shell-dev-repo https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev
 ```
 
 Now you'll see the the plugins show up when you issue:
@@ -114,3 +69,9 @@ After running `bin/build-all.sh`, using your IBM ID (assuming that you've been r
 node gen-and-update-ys1.js "version" "userName" "password"
 ```
 TODO: we should work this in with a functional ID as part of the automated master build
+
+# Promote to Bluemix Plugin Repo in Production
+
+Use the Jenkins job here to manually promote:
+
+https://wcp-cloud-foundry-jenkins.swg-devops.com/job/Promote%20from%20staging%20to%20production/build?delay=0sec
