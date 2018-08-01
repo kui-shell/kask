@@ -8,6 +8,7 @@ import (
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin"
 	"github.com/mholt/archiver"
+	. "./i18n"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -134,7 +135,7 @@ func handleError(err error, ui terminal.UI) string {
 	case nil:
 		return ""
 	default:
-		ui.Failed(err.Error())
+		ui.Failed(T("An error has occurred:\n{{.Error}}\n", map[string]interface{}{"Error": err.Error()}))
 		os.Exit(1)
 	}
 
