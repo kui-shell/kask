@@ -5,8 +5,8 @@ import (
 	"strings"
 	goi18n "github.com/nicksnyder/go-i18n/i18n"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/configuration/core_config"
-	"./detection"
-	"../resources"
+	"github.ibm.com/composer/cloud-shell-cli/i18n/detection"
+	"github.ibm.com/composer/cloud-shell-cli/resources"
 	"github.com/IBM-Bluemix/bluemix-cli-sdk/bluemix/trace"
 )
 
@@ -53,7 +53,6 @@ func Init(coreConfig core_config.Repository, detector detection.Detector) goi18n
 		locale = DEFAULT_LOCALE
 	}
 
-	trace.Logger.Println("Detect locale " + locale)
 	return InitWithLocale(locale)
 }
 

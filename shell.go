@@ -8,7 +8,7 @@ import (
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin"
 	"github.com/mholt/archiver"
-	. "./i18n"
+	. "github.ibm.com/composer/cloud-shell-cli/i18n"
 	"os"
 	"os/exec"
 	"path/filepath"
