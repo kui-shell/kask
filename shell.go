@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -55,35 +56,72 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 	}
 }
 
+func GetDistOSSuffix(headless bool) string {
+	if headless {
+		return "headless.zip"
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return "win32-x64.zip"
+	case "darwin":
+		return "darwin-x64.zip"
+	default:
+		return "linux-x64.zip"
+	}
+}
+
+func GetDistLocation(version string, headless bool) string {
+	/*
+		production distributions:
+			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v1.6.1/IBM%20Cloud%20Shell-darwin-x64.zip
+			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v1.6.1/IBM%20Cloud%20Shell-win32-x64.zip
+			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v1.6.1/IBM%20Cloud%20Shell-linux-x64.zip
+
+		dev distributions:
+			win32: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-win32-x64.zip
+			macOS zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.zip
+			linux-zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-linux-x64.zip
+			headless: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-headless.zip
+	*/
+
+	host := "https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v" + version
+	DEV_OVERRIDE_HOST, overrideSet := os.LookupEnv("CLOUDSHELL_DIST")
+	if overrideSet {
+		host = DEV_OVERRIDE_HOST
+	}
+	if !strings.HasSuffix(host, "/") {
+		host += "/"
+	}
+	return host + "IBM%20Cloud%20Shell-" + GetDistOSSuffix(headless)
+}
+
 func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext) string {
 	ui := terminal.NewStdUI()
 	metadata := shellPlugin.GetMetadata()
 	version := metadata.Version.String()
 
-	host := "https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/"
-	archivePath := "shell-" + version + "-darwin.tar.gz"
+	url := GetDistLocation(version, false)
 
-	url := host + archivePath
 	targetDir := filepath.Join(context.PluginDirectory(), "/cache-"+version)
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	command := filepath.Join(extractedDir, "shell/bin/fsh")
 	if !file_helpers.FileExists(successFile) {
-		downloadedFile := filepath.Join(targetDir, "downloaded.tar.gz")
+		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
 		extractedDir := filepath.Join(targetDir, "extract")
 
 		os.MkdirAll(extractedDir, 0700)
 
 		fileDownloader := new(downloader.FileDownloader)
 		fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
-		trace.Logger.Println("Downloading shell to " + downloadedFile)
+		trace.Logger.Println("Downloading shell from " + url + " to " + downloadedFile)
 		if _, _, err := fileDownloader.DownloadTo(url, downloadedFile); err != nil {
 			return handleError(err, ui)
 		}
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)
 
 		trace.Logger.Println("Extracting shell to " + extractedDir)
-		if err := archiver.TarGz.Open(downloadedFile, extractedDir); err != nil {
+		if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
 			return handleError(err, ui)
 		}
 		trace.Logger.Println("Extracted shell to " + extractedDir)
