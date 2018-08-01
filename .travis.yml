@@ -19,7 +19,7 @@ before_script:
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - bin/build-all.sh
-  - export PLUGIN_VERSION=`out/cloud-shell-linux-amd64 version`
+  - export PLUGIN_VERSION=`out/function-composer-linux-amd64 version`
   - echo "Plugin version is ${PLUGIN_VERSION}"
 deploy:
   - provider: script

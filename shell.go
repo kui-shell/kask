@@ -11,8 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type CloudShellPlugin struct{}
@@ -91,7 +91,7 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 			return handleError(err, ui)
 		}
 		distDir := filepath.Join(extractedDir, "shell/dist")
-		if err := MakeExecutable(distDir); err != nil{
+		if err := MakeExecutable(distDir); err != nil {
 			return handleError(err, ui)
 		}
 
@@ -116,19 +116,18 @@ func MakeExecutable(path string) error {
 
 func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
-		Name:    "shell",
+		Name:    "function-composer",
 		Version: GetVersion(),
 		Commands: []plugin.Command{
 			{
 				Name:        "shell",
 				Alias:       "fsh",
-				Description: "Cloud shell",
+				Description: "Function composer",
 				Usage:       "ibmcloud shell",
 			},
 		},
 	}
 }
-
 
 func handleError(err error, ui terminal.UI) string {
 	switch err {

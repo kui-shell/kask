@@ -107,3 +107,10 @@ To uninstall the repo simply issue:
 ```
 bluemix plugin repo-remove shell-dev-repo
 ```
+
+# Publish to Bluemix Plugin Repo on YS1
+After running `bin/build-all.sh`, using your IBM ID (assuming that you've been registered - ask on #bluemix-cli if not), run the following script to create a PR that the CLI team will merge in manually
+```
+node gen-and-update-ys1.js "version" "userName" "password"
+```
+TODO: we should work this in with a functional ID as part of the automated master build
