@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -21,6 +22,8 @@ type CloudShellPlugin struct{}
 
 // THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
 const PLUGIN_VERSION = "1.6.1"
+
+const MINIMAL_NODE_VERSION = 8
 
 func main() {
 	argsWithoutProg := os.Args[1:]
@@ -34,39 +37,58 @@ func main() {
 
 func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []string) {
 	trace.Logger = trace.NewLogger(context.Trace())
-	command := shellPlugin.DownloadDistIfNecessary(context)
 
 	shellArgs := args[1:]
-	trace.Logger.Println("Running command " + command + " " + strings.Join(shellArgs, " "))
+	headless := IsCommandHeadless(shellArgs)
+	trace.Logger.Println(headless)
 
-	cmd := exec.Command(command, shellArgs...)
+	cmd := shellPlugin.DownloadDistIfNecessary(context, headless)
+	cmd.Args = append(cmd.Args, shellArgs...)
 
-	exitImmediately := len(shellArgs) > 0 && shellArgs[0] == "shell"
-	if exitImmediately {
+	trace.Logger.Println(cmd)
+
+	if !headless {
 		if err := cmd.Start(); err != nil {
 			fmt.Println("command failed!")
 		}
 	} else {
-		stdoutStderr, _ := cmd.CombinedOutput()
-		if err := cmd.Start(); err != nil {
+		stdoutStderr, err := cmd.CombinedOutput()
+		cmd.Run()
+		if err != nil {
+			fmt.Println("headless command failed!")
+			fmt.Println(err)
 		}
 		fmt.Printf("%s", stdoutStderr)
-		if err := cmd.Wait(); err != nil {
-		}
 	}
 }
 
 func GetDistOSSuffix(headless bool) string {
 	if headless {
-		return "headless.zip"
+		return "-headless.zip"
 	}
 	switch runtime.GOOS {
 	case "windows":
-		return "win32-x64.zip"
+		return "-win32-x64.zip"
 	case "darwin":
-		return "darwin-x64.zip"
+		return ".dmg"
 	default:
-		return "linux-x64.zip"
+		return "-linux-x64.zip"
+	}
+}
+
+func GetRootCommand(extractedDir string, headless bool) *exec.Cmd {
+	if headless {
+		return exec.Command("node", filepath.Join(extractedDir, "cloudshell/bin/fsh.js"))
+	}
+	switch runtime.GOOS {
+	case "windows":
+		// TODO verify
+		return exec.Command(filepath.Join(extractedDir, "IBM Cloud Shell-win32-x64\\IBM Cloud Shell.exe"))
+	case "darwin":
+		return exec.Command(filepath.Join(extractedDir, "IBM Cloud Shell-darwin-x64/IBM Cloud Shell.app/Contents/MacOS/IBM Cloud Shell"))
+	default:
+		// TODO verify
+		return exec.Command(filepath.Join(extractedDir, "IBM Cloud Shell-linux-x64/IBM Cloud Shell"))
 	}
 }
 
@@ -92,20 +114,50 @@ func GetDistLocation(version string, headless bool) string {
 	if !strings.HasSuffix(host, "/") {
 		host += "/"
 	}
-	return host + "IBM%20Cloud%20Shell-" + GetDistOSSuffix(headless)
+	return host + "IBM%20Cloud%20Shell" + GetDistOSSuffix(headless)
 }
 
-func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext) string {
+func IsCommandHeadless(shellArgs []string) bool {
+	isShell := len(shellArgs) > 0 && shellArgs[0] == "shell"
+	return !isShell
+}
+
+func MinimalNodeVersionSupported() bool {
+	cmd := exec.Command("node", "-v")
+	stdout, err := cmd.CombinedOutput()
+	cmd.Run()
+	if err != nil {
+		return false
+	}
+	versionRegEx := regexp.MustCompile(`^v([0-9]*)`)
+	version := string(stdout[:])
+	trace.Logger.Println("Node version is " + version)
+	result := versionRegEx.FindStringSubmatch(version)
+	return len(result) > 1 && ToInt(result[1]) >= MINIMAL_NODE_VERSION
+}
+
+func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext, headless bool) *exec.Cmd {
 	ui := terminal.NewStdUI()
 	metadata := shellPlugin.GetMetadata()
 	version := metadata.Version.String()
 
-	url := GetDistLocation(version, false)
+	// we can only support headless execution using the nodejs that's installed on the user's machine
+	if headless && !MinimalNodeVersionSupported() {
+		trace.Logger.Println("Can't use headless since minimal node version is not supported")
+		headless = false
+	}
+
+	url := GetDistLocation(version, headless)
 
 	targetDir := filepath.Join(context.PluginDirectory(), "/cache-"+version)
+
+	if headless {
+		targetDir = filepath.Join(context.PluginDirectory(), "/cache-headless-"+version)
+	}
+
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
-	command := filepath.Join(extractedDir, "shell/bin/fsh")
+	command := GetRootCommand(extractedDir, headless)
 	if !file_helpers.FileExists(successFile) {
 		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
 		extractedDir := filepath.Join(targetDir, "extract")
@@ -116,26 +168,23 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 		fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
 		trace.Logger.Println("Downloading shell from " + url + " to " + downloadedFile)
 		if _, _, err := fileDownloader.DownloadTo(url, downloadedFile); err != nil {
-			return handleError(err, ui)
+			handleError(err, ui)
 		}
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)
 
 		trace.Logger.Println("Extracting shell to " + extractedDir)
-		if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
-			return handleError(err, ui)
+		if strings.HasSuffix(url, ".dmg") {
+			ExtractDMG(downloadedFile, extractedDir)
+		} else {
+			if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
+				handleError(err, ui)
+			}
 		}
+
 		trace.Logger.Println("Extracted shell to " + extractedDir)
 
-		if err := MakeExecutable(command); err != nil {
-			return handleError(err, ui)
-		}
-		distDir := filepath.Join(extractedDir, "shell/dist")
-		if err := MakeExecutable(distDir); err != nil {
-			return handleError(err, ui)
-		}
-
 		if _, err := os.OpenFile(successFile, os.O_RDONLY|os.O_CREATE, 0666); err != nil {
-			return handleError(err, ui)
+			handleError(err, ui)
 		}
 	} else {
 		trace.Logger.Println("Using cached download")
@@ -151,6 +200,41 @@ func MakeExecutable(path string) error {
 		}
 		return err
 	})
+}
+
+func ExtractDMG(downloadedFile string, extractedDir string) {
+	mountPoint := MountDiskImage(downloadedFile)
+	pathForMac := filepath.Join(extractedDir, "IBM Cloud Shell-darwin-x64")
+	os.Mkdir(pathForMac, 0700)
+	copyCmd := exec.Command("cp", "-r", filepath.Join(mountPoint, "IBM Cloud Shell.app"), pathForMac)
+	copyCmd.Run()
+	UnmountDiskImage(mountPoint)
+}
+
+func MountDiskImage(tmpPath string) string {
+	trace.Logger.Println("Mounting image at " + tmpPath)
+	cmd := exec.Command("hdiutil", "attach", "-readonly", "-nobrowse", tmpPath)
+	stdout, err := cmd.CombinedOutput()
+	cmd.Run()
+	if err != nil {
+		trace.Logger.Println("Problem on mount:" + err.Error())
+	}
+	stdoutStr := string(stdout[:])
+	mountPoint := strings.TrimSpace(stdoutStr[strings.LastIndex(stdoutStr, "Apple_HFS")+len("Apple_HFS"):])
+	if mountPoint == "" {
+		mountPoint = "/Volumes/IBM Cloud Shell"
+	}
+	trace.Logger.Println("Mounting at " + mountPoint)
+	return mountPoint
+}
+
+func UnmountDiskImage(mountPoint string) {
+	cmd := exec.Command("hdiutil", "detach", mountPoint)
+	_, err := cmd.CombinedOutput()
+	cmd.Run()
+	if err != nil {
+		trace.Logger.Println("Problem on unmount:" + err.Error())
+	}
 }
 
 func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
