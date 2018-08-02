@@ -40,7 +40,10 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 
 	shellArgs := args[1:]
 	headless := IsCommandHeadless(shellArgs)
-	trace.Logger.Println(headless)
+
+	if headless {
+		trace.Logger.Println("Executing headless command")
+	}
 
 	cmd := shellPlugin.DownloadDistIfNecessary(context, headless)
 	cmd.Args = append(cmd.Args, shellArgs...)
