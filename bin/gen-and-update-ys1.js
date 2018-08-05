@@ -21,6 +21,22 @@ const platformConfig = {
 	"darwin-amd64": "Checksum_MacOS"
 };
 
+function hasExistingVersion(currentVersion, callback) {
+	request({
+		url: "https://plugins.stage1.ng.bluemix.net/bx/list/" + PLUGIN_NAME,
+		json: true
+	}, (err, response, body) => {
+		if (err) {
+			console.error(err);
+			console.error(`Couldn't get existing versions!`);
+			process.exit(1);
+		}
+		const existing = body.findIndex((version) => version.version === currentVersion) > -1;
+		console.log(`Version ${currentVersion} exists: ` + existing);
+		callback(null, existing);
+	});
+}
+
 function generate(version, inputFile, userName, password) {
 	const formData = {};
 	const params = [];
@@ -55,18 +71,21 @@ function generate(version, inputFile, userName, password) {
 		parameter: params
 	});
 
-	request.post({
-		url: "https://wcp-cloud-foundry-jenkins.swg-devops.com/job/Publish%20Plugin%20to%20YS1/build",
-		formData: formData,
-		auth: {
-			user: userName,
-			pass: password
-		}
-	}, (err, response, body) => {
-		if (err) {
-			return console.error('upload failed:', err);
-		}
-		console.log('Upload successful!  Server responded with:', body);
+	hasExistingVersion(versionArg, (err, exists) => {
+		const jobName = exists ? "Refresh-Plugin-Version-on-YS1" : "Publish%20Plugin%20to%20YS1";
+		request.post({
+			url: `https://wcp-cloud-foundry-jenkins.swg-devops.com/job/${jobName}/build`,
+			formData: formData,
+			auth: {
+				user: userName,
+				pass: password
+			}
+		}, (err, response, body) => {
+			if (err) {
+				return console.error('upload failed:', err);
+			}
+			console.log('Upload successful!  Server responded with:', body);
+		});
 	});
 }
 
