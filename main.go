@@ -1,38 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/terminal"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/trace"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/downloader"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin"
+	"github.ibm.com/composer/cloud-shell-cli/shell"
 	"github.com/mholt/archiver"
-	. "github.ibm.com/composer/cloud-shell-cli/i18n"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"runtime"
-	"strconv"
-	"strings"
 )
 
-type CloudShellPlugin struct{}
-
-// THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
-const PLUGIN_VERSION = "1.6.1"
-
-const MINIMAL_NODE_VERSION = 8
-
 func main() {
-	argsWithoutProg := os.Args[1:]
-	if len(argsWithoutProg) > 0 && argsWithoutProg[0] == "version" {
-		version := GetVersion()
-		fmt.Println(version.String())
-		return
-	}
-	plugin.Start(new(CloudShellPlugin))
+	shell.Start
 }
 
 func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []string) {
@@ -151,7 +125,8 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 
 	// we can only support headless execution using the nodejs that's installed on the user's machine
 	if headless && !MinimalNodeVersionSupported() {
-		trace.Logger.Println("Can't use headless since minimal node version is not supported")
+		trace.Logger.Println("Can't use headless since minimal node version v" +
+			strconv.Itoa(MINIMAL_NODE_VERSION) + " is not supported")
 		headless = false
 		// TODO get full shell working with headless commands - Nick arg position
 	}
