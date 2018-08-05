@@ -73,6 +73,8 @@ function generate(version, inputFile, userName, password) {
 
 	hasExistingVersion(versionArg, (err, exists) => {
 		const jobName = exists ? "Refresh-Plugin-Version-on-YS1" : "Publish%20Plugin%20to%20YS1";
+		const url = `https://wcp-cloud-foundry-jenkins.swg-devops.com/job/${jobName}/build`;
+		console.log(`Calling ${url} with ${userName} and ${password.replace(/./g, "*")}`);
 		request.post({
 			url: `https://wcp-cloud-foundry-jenkins.swg-devops.com/job/${jobName}/build`,
 			formData: formData,
