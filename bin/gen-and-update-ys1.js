@@ -82,7 +82,12 @@ function generate(version, inputFile, userName, password) {
 			}
 		}, (err, response, body) => {
 			if (err) {
-				return console.error('upload failed:', err);
+				console.error('upload failed:', err);
+				process.exit(1);
+			}
+			if (response.statusCode < 200 || response.statusCode > 299) {
+				console.error('upload failed:', response);
+				process.exit(1);
 			}
 			console.log('Upload successful!  Server responded with:', body);
 		});
