@@ -86,7 +86,7 @@ function generate(version, inputFile, userName, password) {
 				process.exit(1);
 			}
 			if (response.statusCode < 200 || response.statusCode > 299) {
-				console.error('upload failed:', response);
+				console.error('upload failed:', response.statusCode + " - " + body);
 				process.exit(1);
 			}
 			console.log('Upload successful!  Server responded with:', body);
