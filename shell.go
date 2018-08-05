@@ -73,7 +73,7 @@ func GetDistOSSuffix(headless bool) string {
 	case "windows":
 		return "-win32-x64.zip"
 	case "darwin":
-		return ".dmg"
+		return "-darwin-x64.tar.bz2"
 	default:
 		return "-linux-x64.zip"
 	}
@@ -105,6 +105,7 @@ func GetDistLocation(version string, headless bool) string {
 		dev distributions:
 			win32: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-win32-x64.zip
 			macOS zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.zip
+			macOS tar.bz2: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.tar.bz2
 			linux-zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-linux-x64.zip
 			headless: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-headless.zip
 	*/
@@ -121,7 +122,7 @@ func GetDistLocation(version string, headless bool) string {
 }
 
 func IsCommandHeadless(shellArgs []string) bool {
-	isShell := len(shellArgs) > 0 && shellArgs[0] == "shell"
+	isShell := len(shellArgs) > 0 && (shellArgs[0] == "shell" || shellArgs[0] == "preview")
 	return !isShell
 }
 
@@ -148,6 +149,7 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 	if headless && !MinimalNodeVersionSupported() {
 		trace.Logger.Println("Can't use headless since minimal node version is not supported")
 		headless = false
+		// TODO get full shell working with headless commands - Nick arg position
 	}
 
 	url := GetDistLocation(version, headless)
@@ -168,7 +170,10 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 		os.MkdirAll(extractedDir, 0700)
 
 		fileDownloader := new(downloader.FileDownloader)
-		fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
+		// we don't want headless mode to include anything extra in the output
+		if !headless {
+			fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
+		}
 		trace.Logger.Println("Downloading shell from " + url + " to " + downloadedFile)
 		if _, _, err := fileDownloader.DownloadTo(url, downloadedFile); err != nil {
 			handleError(err, ui)
@@ -176,8 +181,10 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)
 
 		trace.Logger.Println("Extracting shell to " + extractedDir)
-		if strings.HasSuffix(url, ".dmg") {
-			ExtractDMG(downloadedFile, extractedDir)
+		if strings.HasSuffix(url, ".tar.bz2") {
+			if err := archiver.TarBz2.Open(downloadedFile, extractedDir); err != nil {
+				handleError(err, ui)
+			}
 		} else {
 			if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
 				handleError(err, ui)
@@ -203,41 +210,6 @@ func MakeExecutable(path string) error {
 		}
 		return err
 	})
-}
-
-func ExtractDMG(downloadedFile string, extractedDir string) {
-	mountPoint := MountDiskImage(downloadedFile)
-	pathForMac := filepath.Join(extractedDir, "IBM Cloud Shell-darwin-x64")
-	os.Mkdir(pathForMac, 0700)
-	copyCmd := exec.Command("cp", "-r", filepath.Join(mountPoint, "IBM Cloud Shell.app"), pathForMac)
-	copyCmd.Run()
-	UnmountDiskImage(mountPoint)
-}
-
-func MountDiskImage(tmpPath string) string {
-	trace.Logger.Println("Mounting image at " + tmpPath)
-	cmd := exec.Command("hdiutil", "attach", "-readonly", "-nobrowse", tmpPath)
-	stdout, err := cmd.CombinedOutput()
-	cmd.Run()
-	if err != nil {
-		trace.Logger.Println("Problem on mount:" + err.Error())
-	}
-	stdoutStr := string(stdout[:])
-	mountPoint := strings.TrimSpace(stdoutStr[strings.LastIndex(stdoutStr, "Apple_HFS")+len("Apple_HFS"):])
-	if mountPoint == "" {
-		mountPoint = "/Volumes/IBM Cloud Shell"
-	}
-	trace.Logger.Println("Mounting at " + mountPoint)
-	return mountPoint
-}
-
-func UnmountDiskImage(mountPoint string) {
-	cmd := exec.Command("hdiutil", "detach", mountPoint)
-	_, err := cmd.CombinedOutput()
-	cmd.Run()
-	if err != nil {
-		trace.Logger.Println("Problem on unmount:" + err.Error())
-	}
 }
 
 func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
