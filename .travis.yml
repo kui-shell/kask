@@ -28,9 +28,7 @@ deploy:
     on:
       branch: master
   - provider: script
-    script:
-      - bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/qa/ ${PLUGIN_VERSION} ${COS_API_KEY}
-      - bin/gen-and-update-ys1.js ${PLUGIN_VERSION} "composer@us.ibm.com" "${COMPOSER_USER_PASSWORD}"
+    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/qa/ ${PLUGIN_VERSION} ${COS_API_KEY} && bin/gen-and-update-ys1.js ${PLUGIN_VERSION} "composer@us.ibm.com" "${COMPOSER_USER_PASSWORD}"
     skip_cleanup: true
     on:
       branch: deploy_qa
