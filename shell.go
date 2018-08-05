@@ -145,6 +145,10 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 	metadata := shellPlugin.GetMetadata()
 	version := metadata.Version.String()
 
+	// headlessCommand means that there isn't meant to be a GUI - if there isn't
+	// proper node support, we may end up using the GUI to run the command in which case headless will be true
+	headlessCommand := headless
+
 	// we can only support headless execution using the nodejs that's installed on the user's machine
 	if headless && !MinimalNodeVersionSupported() {
 		trace.Logger.Println("Can't use headless since minimal node version is not supported")
@@ -163,6 +167,9 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	command := GetRootCommand(extractedDir, headless)
+	if headlessCommand {
+		command.Env = append(os.Environ(), "FSH_HEADLESS=true")
+	}
 	if !file_helpers.FileExists(successFile) {
 		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
 		extractedDir := filepath.Join(targetDir, "extract")
@@ -171,7 +178,7 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 
 		fileDownloader := new(downloader.FileDownloader)
 		// we don't want headless mode to include anything extra in the output
-		if !headless {
+		if !headlessCommand {
 			fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
 		}
 		trace.Logger.Println("Downloading shell from " + url + " to " + downloadedFile)
