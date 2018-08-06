@@ -1,4 +1,4 @@
-package main
+package shell
 
 import (
 	"fmt"
@@ -18,14 +18,16 @@ import (
 	"strings"
 )
 
-type CloudShellPlugin struct{}
+type CloudShellPlugin struct{
+	ui terminal.UI
+}
 
 // THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
 const PLUGIN_VERSION = "1.6.1"
 
 const MINIMAL_NODE_VERSION = 8
 
-func main() {
+func Start() {
 	argsWithoutProg := os.Args[1:]
 	if len(argsWithoutProg) > 0 && argsWithoutProg[0] == "version" {
 		version := GetVersion()
@@ -35,9 +37,13 @@ func main() {
 	plugin.Start(new(CloudShellPlugin))
 }
 
+func (p *CloudShellPlugin) init(ui terminal.UI) {
+	p.ui = ui
+}
+
 func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []string) {
 	trace.Logger = trace.NewLogger(context.Trace())
-
+	shellPlugin.init(terminal.NewStdUI())
 	shellArgs := args[1:]
 	headless := IsCommandHeadless(shellArgs)
 
@@ -45,7 +51,11 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 		trace.Logger.Println("Executing headless command")
 	}
 
-	cmd := shellPlugin.DownloadDistIfNecessary(context, headless)
+	cmd, err := shellPlugin.DownloadDistIfNecessary(context, headless)
+	if (err != nil) {
+		os.Exit(1)
+		return;
+	}
 	cmd.Args = append(cmd.Args, shellArgs...)
 
 	trace.Logger.Println(cmd)
@@ -137,12 +147,12 @@ func MinimalNodeVersionSupported() bool {
 	version := string(stdout[:])
 	trace.Logger.Println("Node version is " + version)
 	result := versionRegEx.FindStringSubmatch(version)
-	return len(result) > 1 && ToInt(result[1]) >= MINIMAL_NODE_VERSION
+	return len(result) > 1 && toInt(result[1]) >= MINIMAL_NODE_VERSION
 }
 
-func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext, headless bool) *exec.Cmd {
-	ui := terminal.NewStdUI()
-	metadata := shellPlugin.GetMetadata()
+func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext, headless bool) (*exec.Cmd, error) {
+
+	metadata := p.GetMetadata()
 	version := metadata.Version.String()
 
 	// headlessCommand means that there isn't meant to be a GUI - if there isn't
@@ -179,35 +189,39 @@ func (shellPlugin *CloudShellPlugin) DownloadDistIfNecessary(context plugin.Plug
 		fileDownloader := new(downloader.FileDownloader)
 		// we don't want headless mode to include anything extra in the output
 		if !headlessCommand {
-			fileDownloader.ProxyReader = downloader.NewProgressBar(ui.Writer())
+			fileDownloader.ProxyReader = downloader.NewProgressBar(p.ui.Writer())
 		}
 		trace.Logger.Println("Downloading shell from " + url + " to " + downloadedFile)
 		if _, _, err := fileDownloader.DownloadTo(url, downloadedFile); err != nil {
-			handleError(err, ui)
+			handleError(err, p.ui)
+			return nil, err
 		}
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)
 
 		trace.Logger.Println("Extracting shell to " + extractedDir)
 		if strings.HasSuffix(url, ".tar.bz2") {
 			if err := archiver.TarBz2.Open(downloadedFile, extractedDir); err != nil {
-				handleError(err, ui)
+				handleError(err, p.ui)
+				return nil, err
 			}
 		} else {
 			if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
-				handleError(err, ui)
+				handleError(err, p.ui)
+				return nil, err
 			}
 		}
 
 		trace.Logger.Println("Extracted shell to " + extractedDir)
 
 		if _, err := os.OpenFile(successFile, os.O_RDONLY|os.O_CREATE, 0666); err != nil {
-			handleError(err, ui)
+			handleError(err, p.ui)
+			return nil, err
 		}
 	} else {
 		trace.Logger.Println("Using cached download")
 	}
 
-	return command
+	return command, nil
 }
 
 func MakeExecutable(path string) error {
@@ -234,19 +248,18 @@ func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func handleError(err error, ui terminal.UI) string {
+func handleError(err error, ui terminal.UI) {
 	switch err {
 	case nil:
-		return ""
+		return
 	default:
 		ui.Failed(T("An error has occurred:\n{{.Error}}\n", map[string]interface{}{"Error": err.Error()}))
-		os.Exit(1)
 	}
 
-	return ""
+	return
 }
 
-func ToInt(in string) int {
+func toInt(in string) int {
 	outValue, _ := strconv.Atoi(in)
 	return outValue
 }
@@ -254,8 +267,8 @@ func ToInt(in string) int {
 func GetVersion() plugin.VersionType {
 	s := strings.Split(PLUGIN_VERSION, ".")
 	return plugin.VersionType{
-		Major: ToInt(s[0]),
-		Minor: ToInt(s[1]),
-		Build: ToInt(s[2]),
+		Major: toInt(s[0]),
+		Minor: toInt(s[1]),
+		Build: toInt(s[2]),
 	}
 }

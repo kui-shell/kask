@@ -16,8 +16,10 @@ before_script:
   - pushd bin && npm install && popd
   - sudo apt-get install lftp
   - go get
+  - go get "github.com/stretchr/testify/suite"
 script:
   - go vet $(go list ./... | grep -v "vendor")
+  - CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
   - bin/build-all.sh
   - export PLUGIN_VERSION=`out/function-composer-linux-amd64 version`
   - echo "Plugin version is ${PLUGIN_VERSION}"
