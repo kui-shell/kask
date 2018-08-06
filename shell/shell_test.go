@@ -32,7 +32,7 @@ func (suite *ShellCmdTestSuite) SetupSuit() {
 }
 
 
-func (suite *ShellCmdTestSuite) SetupTest() {
+func (suite *ShellCmdTestSuite) SetupSuite() {
 	suite.SaveDir, _ = ioutil.TempDir("", "testfiledownload")
 	suite.pluginContext = createDefaultFakePluginContext(suite.SaveDir)
 	suite.version = suite.cmd.GetMetadata().Version.String()
@@ -43,7 +43,7 @@ func (suite *ShellCmdTestSuite) SetupTest() {
 	suite.cmd.init(suite.ui)
 }
 
-func (suite *ShellCmdTestSuite) TearDownTest() {
+func (suite *ShellCmdTestSuite) TearDownSuite() {
 	if suite.SaveDir != "" {
 		os.RemoveAll(suite.SaveDir)
 	}
@@ -93,7 +93,7 @@ func createDefaultFakePluginContext(saveDir string) *pluginfakes.FakePluginConte
 	context.HasAPIEndpointReturns(true)
 	context.CFReturns(cfContext)
 	cfContext.IsLoggedInReturns(true)
-	context.APIEndpointReturns("https://api-endpoint")
+	//context.APIEndpointReturns("https://api-endpoint")
 	context.PluginDirectoryReturns(saveDir)
 	context.TraceReturns("true")
 	log.Println(context.PluginDirectory())

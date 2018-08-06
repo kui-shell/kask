@@ -83,7 +83,7 @@ func GetDistOSSuffix(headless bool) string {
 	case "windows":
 		return "-win32-x64.zip"
 	case "darwin":
-		return ".dmg"
+		return "-darwin-x64.tar.bz2"
 	default:
 		return "-linux-x64.zip"
 	}
@@ -115,6 +115,7 @@ func GetDistLocation(version string, headless bool) string {
 		dev distributions:
 			win32: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-win32-x64.zip
 			macOS zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.zip
+			macOS tar.bz2: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.tar.bz2
 			linux-zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-linux-x64.zip
 			headless: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-headless.zip
 	*/
@@ -131,7 +132,7 @@ func GetDistLocation(version string, headless bool) string {
 }
 
 func IsCommandHeadless(shellArgs []string) bool {
-	isShell := len(shellArgs) > 0 && shellArgs[0] == "shell"
+	isShell := len(shellArgs) > 0 && (shellArgs[0] == "shell" || shellArgs[0] == "preview")
 	return !isShell
 }
 
@@ -146,7 +147,7 @@ func MinimalNodeVersionSupported() bool {
 	version := string(stdout[:])
 	trace.Logger.Println("Node version is " + version)
 	result := versionRegEx.FindStringSubmatch(version)
-	return len(result) > 1 && ToInt(result[1]) >= MINIMAL_NODE_VERSION
+	return len(result) > 1 && toInt(result[1]) >= MINIMAL_NODE_VERSION
 }
 
 func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext, headless bool) (*exec.Cmd, error) {
@@ -154,11 +155,15 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 	metadata := p.GetMetadata()
 	version := metadata.Version.String()
 
+	// headlessCommand means that there isn't meant to be a GUI - if there isn't
+	// proper node support, we may end up using the GUI to run the command in which case headless will be true
+	headlessCommand := headless
+
 	// we can only support headless execution using the nodejs that's installed on the user's machine
 	if headless && !MinimalNodeVersionSupported() {
-		trace.Logger.Println("Can't use headless since minimal node version v" +
-			strconv.Itoa(MINIMAL_NODE_VERSION) + " is not supported")
+		trace.Logger.Println("Can't use headless since minimal node version is not supported")
 		headless = false
+		// TODO get full shell working with headless commands - Nick arg position
 	}
 
 	url := GetDistLocation(version, headless)
@@ -172,6 +177,9 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	command := GetRootCommand(extractedDir, headless)
+	if headlessCommand {
+		command.Env = append(os.Environ(), "FSH_HEADLESS=true")
+	}
 	if !file_helpers.FileExists(successFile) {
 		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
 		extractedDir := filepath.Join(targetDir, "extract")
@@ -179,18 +187,23 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 		os.MkdirAll(extractedDir, 0700)
 
 		fileDownloader := new(downloader.FileDownloader)
-		fileDownloader.ProxyReader = downloader.NewProgressBar(p.ui.Writer())
+		// we don't want headless mode to include anything extra in the output
+		if !headlessCommand {
+			fileDownloader.ProxyReader = downloader.NewProgressBar(p.ui.Writer())
+		}
 		trace.Logger.Println("Downloading shell from " + url + " to " + downloadedFile)
 		if _, _, err := fileDownloader.DownloadTo(url, downloadedFile); err != nil {
 			handleError(err, p.ui)
 			return nil, err
 		}
 		trace.Logger.Println("Downloaded shell to " + downloadedFile)
-		p.ui.Say("Downloaded shell to " + downloadedFile) // SARS
+
 		trace.Logger.Println("Extracting shell to " + extractedDir)
-		p.ui.Say("Extracting shell to " + extractedDir) // SARS
-		if strings.HasSuffix(url, ".dmg") {
-			ExtractDMG(downloadedFile, extractedDir)
+		if strings.HasSuffix(url, ".tar.bz2") {
+			if err := archiver.TarBz2.Open(downloadedFile, extractedDir); err != nil {
+				handleError(err, p.ui)
+				return nil, err
+			}
 		} else {
 			if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
 				handleError(err, p.ui)
@@ -199,7 +212,7 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 		}
 
 		trace.Logger.Println("Extracted shell to " + extractedDir)
-		p.ui.Say("Extracted shell to " + extractedDir) // SARS
+
 		if _, err := os.OpenFile(successFile, os.O_RDONLY|os.O_CREATE, 0666); err != nil {
 			handleError(err, p.ui)
 			return nil, err
@@ -218,41 +231,6 @@ func MakeExecutable(path string) error {
 		}
 		return err
 	})
-}
-
-func ExtractDMG(downloadedFile string, extractedDir string) {
-	mountPoint := MountDiskImage(downloadedFile)
-	pathForMac := filepath.Join(extractedDir, "IBM Cloud Shell-darwin-x64")
-	os.Mkdir(pathForMac, 0700)
-	copyCmd := exec.Command("cp", "-r", filepath.Join(mountPoint, "IBM Cloud Shell.app"), pathForMac)
-	copyCmd.Run()
-	UnmountDiskImage(mountPoint)
-}
-
-func MountDiskImage(tmpPath string) string {
-	trace.Logger.Println("Mounting image at " + tmpPath)
-	cmd := exec.Command("hdiutil", "attach", "-readonly", "-nobrowse", tmpPath)
-	stdout, err := cmd.CombinedOutput()
-	cmd.Run()
-	if err != nil {
-		trace.Logger.Println("Problem on mount:" + err.Error())
-	}
-	stdoutStr := string(stdout[:])
-	mountPoint := strings.TrimSpace(stdoutStr[strings.LastIndex(stdoutStr, "Apple_HFS")+len("Apple_HFS"):])
-	if mountPoint == "" {
-		mountPoint = "/Volumes/IBM Cloud Shell"
-	}
-	trace.Logger.Println("Mounting at " + mountPoint)
-	return mountPoint
-}
-
-func UnmountDiskImage(mountPoint string) {
-	cmd := exec.Command("hdiutil", "detach", mountPoint)
-	_, err := cmd.CombinedOutput()
-	cmd.Run()
-	if err != nil {
-		trace.Logger.Println("Problem on unmount:" + err.Error())
-	}
 }
 
 func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
@@ -281,7 +259,7 @@ func handleError(err error, ui terminal.UI) {
 	return
 }
 
-func ToInt(in string) int {
+func toInt(in string) int {
 	outValue, _ := strconv.Atoi(in)
 	return outValue
 }
@@ -289,8 +267,8 @@ func ToInt(in string) int {
 func GetVersion() plugin.VersionType {
 	s := strings.Split(PLUGIN_VERSION, ".")
 	return plugin.VersionType{
-		Major: ToInt(s[0]),
-		Minor: ToInt(s[1]),
-		Build: ToInt(s[2]),
+		Major: toInt(s[0]),
+		Minor: toInt(s[1]),
+		Build: toInt(s[2]),
 	}
 }
