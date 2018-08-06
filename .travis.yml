@@ -18,6 +18,7 @@ before_script:
   - go get
 script:
   - go vet $(go list ./... | grep -v "vendor")
+  - go test ./...
   - bin/build-all.sh
   - export PLUGIN_VERSION=`out/function-composer-linux-amd64 version`
   - echo "Plugin version is ${PLUGIN_VERSION}"

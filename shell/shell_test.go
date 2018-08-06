@@ -56,15 +56,23 @@ func (suite *ShellCmdTestSuite) TestGetIsCmdHeadless() {
 
 
 func (suite *ShellCmdTestSuite) TestRunDownloadDistNonHeadless() {
-	suite.cmd.DownloadDistIfNecessary(suite.pluginContext, false)
+	shell, err := suite.cmd.DownloadDistIfNecessary(suite.pluginContext, false)
 	log.Println(suite.ui.Outputs())
 	path := suite.pluginContext.PluginDirectory()
 	successFile := filepath.Join(path, "/cache-" + suite.version, "success")
 	suite.FileExists(successFile)
 
+	// Run shell command
+	shell.Args = append(shell.Args, "version")
+	shell.Env = append(os.Environ(), "FSH_HEADLESS=true")
+	stdout, err := shell.CombinedOutput()
+	shell.Run()
+	version := string(stdout[:])
+	suite.NotNil(version)
+
 	// Test duplicate download fails
 	os.Remove(filepath.Join(path, "/cache-" + suite.version, "success"))
-	_, err := suite.cmd.DownloadDistIfNecessary(suite.pluginContext, false)
+	_, err = suite.cmd.DownloadDistIfNecessary(suite.pluginContext, false)
 	suite.Equal(file_helpers.FileExists(successFile), false)
 	suite.NotNil(err)
 }
