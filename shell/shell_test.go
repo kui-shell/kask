@@ -27,12 +27,8 @@ func TestShellCmdTestSuite(t *testing.T) {
 	suite.Run(t, new(ShellCmdTestSuite))
 }
 
-func (suite *ShellCmdTestSuite) SetupSuit() {
-	i18n.T = i18n.InitWithLocale(i18n.DEFAULT_LOCALE)
-}
-
-
 func (suite *ShellCmdTestSuite) SetupSuite() {
+	i18n.T = i18n.InitWithLocale(i18n.DEFAULT_LOCALE)
 	suite.SaveDir, _ = ioutil.TempDir("", "testfiledownload")
 	suite.pluginContext = createDefaultFakePluginContext(suite.SaveDir)
 	suite.version = suite.cmd.GetMetadata().Version.String()
@@ -83,11 +79,11 @@ func (suite *ShellCmdTestSuite) TestRunDownloadDistHeadless() {
 		suite.cmd.DownloadDistIfNecessary(suite.pluginContext, true)
 		log.Println(suite.ui.Outputs())
 		path := suite.pluginContext.PluginDirectory()
-		successFile := filepath.Join(path, "/cache-headless" + suite.version, "success")
+		successFile := filepath.Join(path, "/cache-headless-" + suite.version, "success")
 		suite.FileExists(successFile)
 
 		// Test duplicate download
-		os.Remove(filepath.Join(path, "/cache-headless" + suite.version, "success"))
+		os.Remove(filepath.Join(path, "/cache-headless-" + suite.version, "success"))
 		_, err := suite.cmd.DownloadDistIfNecessary(suite.pluginContext, true)
 		suite.Equal(file_helpers.FileExists(successFile), false)
 		suite.NotNil(err)
