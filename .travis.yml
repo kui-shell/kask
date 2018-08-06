@@ -15,7 +15,8 @@ before_script:
   - node -v
   - pushd bin && npm install && popd
   - sudo apt-get install lftp
-  - go get -t
+  - go get
+  - go get "github.com/stretchr/testify/suite"
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
