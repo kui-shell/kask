@@ -16,6 +16,7 @@ before_script:
   - pushd bin && npm install && popd
   - sudo apt-get install lftp
   - go get
+  - go get "github.com/stretchr/testify/suite"
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - go test ./...
