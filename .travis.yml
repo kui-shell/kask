@@ -39,3 +39,5 @@ deploy:
     skip_cleanup: true
     on:
       branch: deploy_prod
+notifications:
+  slack: watsondataplatform:9aFO9Dv1PIq1YenObXn9dGqK
