@@ -52,10 +52,13 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 	}
 
 	cmd, err := shellPlugin.DownloadDistIfNecessary(context, headless)
-	if err != nil {
-		os.Exit(1)
+	if err != nil {os.Exit(1)
 		return
 	}
+	shellPlugin.invokeRun(context, cmd, shellArgs, headless)
+}
+
+func (shellPlugin *CloudShellPlugin) invokeRun(context plugin.PluginContext, cmd *exec.Cmd, shellArgs []string, headless bool) {
 	cmd.Args = append(cmd.Args, shellArgs...)
 
 	trace.Logger.Println(cmd)
@@ -67,11 +70,22 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 	} else {
 		stdoutStderr, err := cmd.CombinedOutput()
 		cmd.Run()
+		fmt.Printf("stdoutStderr: %s", stdoutStderr)
 		if err != nil {
+			if err.Error() == "exit status 126" {
+				trace.Logger.Println("This is a non-headless command, retry as non-headless!")
+				headless = !headless
+				cmd, err = shellPlugin.DownloadDistIfNecessary(context, headless)
+				if (err != nil) {
+					os.Exit(1)
+					return;
+				}
+				shellPlugin.invokeRun(context, cmd, shellArgs, headless);
+				return;
+			}
 			fmt.Println("headless command failed!")
 			fmt.Println(err)
 		}
-		fmt.Printf("%s", stdoutStderr)
 	}
 }
 
@@ -91,7 +105,7 @@ func GetDistOSSuffix(headless bool) string {
 
 func GetRootCommand(extractedDir string, headless bool) *exec.Cmd {
 	if headless {
-		return exec.Command("node", filepath.Join(extractedDir, "cloudshell/bin/fsh.js"))
+		return exec.Command("node", filepath.Join(extractedDir, "cloudshell/bin/fsh"))
 	}
 	switch runtime.GOOS {
 	case "windows":
