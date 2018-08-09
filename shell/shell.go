@@ -80,7 +80,7 @@ func (shellPlugin *CloudShellPlugin) invokeRun(context plugin.PluginContext, cmd
 					os.Exit(1)
 					return;
 				}
-				shellPlugin.invokeRun(context, cmd, shellArgs, headless);
+				shellPlugin.invokeRun(context, cmd, shellArgs, headless)
 				return;
 			}
 			fmt.Println("headless command failed!")
