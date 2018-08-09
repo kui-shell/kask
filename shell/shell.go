@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-type CloudShellPlugin struct{
+type CloudShellPlugin struct {
 	ui terminal.UI
 }
 
@@ -52,9 +52,9 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 	}
 
 	cmd, err := shellPlugin.DownloadDistIfNecessary(context, headless)
-	if (err != nil) {
+	if err != nil {
 		os.Exit(1)
-		return;
+		return
 	}
 	cmd.Args = append(cmd.Args, shellArgs...)
 
@@ -108,9 +108,9 @@ func GetRootCommand(extractedDir string, headless bool) *exec.Cmd {
 func GetDistLocation(version string, headless bool) string {
 	/*
 		production distributions:
-			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v1.6.1/IBM%20Cloud%20Shell-darwin-x64.zip
-			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v1.6.1/IBM%20Cloud%20Shell-win32-x64.zip
-			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v1.6.1/IBM%20Cloud%20Shell-linux-x64.zip
+			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-1.14.0/IBM%20Cloud%20Shell-darwin-x64.zip
+			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-1.14.0/IBM%20Cloud%20Shell-win32-x64.zip
+			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-1.14.0/IBM%20Cloud%20Shell-linux-x64.zip
 
 		dev distributions:
 			win32: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-win32-x64.zip
@@ -120,7 +120,7 @@ func GetDistLocation(version string, headless bool) string {
 			headless: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-headless.zip
 	*/
 
-	host := "https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-v" + version
+	host := "https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-" + version
 	DEV_OVERRIDE_HOST, overrideSet := os.LookupEnv("CLOUDSHELL_DIST")
 	if overrideSet {
 		host = DEV_OVERRIDE_HOST
