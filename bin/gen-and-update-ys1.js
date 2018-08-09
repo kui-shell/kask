@@ -21,7 +21,7 @@ const platformConfig = {
 	"darwin-amd64": "Checksum_MacOS"
 };
 
-function hasExistingVersion(currentVersion, callback) {
+function hasExistingVersionInPluginFile(currentVersion, callback) {
 	request({
 		url: "https://plugins.stage1.ng.bluemix.net/bx/list/" + PLUGIN_NAME,
 		json: true
@@ -32,6 +32,22 @@ function hasExistingVersion(currentVersion, callback) {
 			process.exit(1);
 		}
 		const existing = body.findIndex((version) => version.version === currentVersion) > -1;
+		console.log(`Version ${currentVersion} exists: ` + existing);
+		callback(null, existing);
+	});
+}
+
+function hasExistingVersionOnFTP(currentVersion, callback) {
+	request({
+		url: `http://bluemix-cli-build.mybluemix.net/repo/bluemix-plugins/${PLUGIN_NAME}/${currentVersion}/`,
+		json: true
+	}, (err, response, body) => {
+		if (err) {
+			console.error(err);
+			console.error(`Couldn't get existing version on FTP server!`);
+			process.exit(1);
+		}
+		const existing = response.statusCode >= 200 && response.statusCode < 300;
 		console.log(`Version ${currentVersion} exists: ` + existing);
 		callback(null, existing);
 	});
@@ -71,7 +87,7 @@ function generate(version, inputFile, userName, password) {
 		parameter: params
 	});
 
-	hasExistingVersion(versionArg, (err, exists) => {
+	hasExistingVersionOnFTP(versionArg, (err, exists) => {
 		const jobName = exists ? "Refresh-Plugin-Version-on-YS1" : "Publish%20Plugin%20to%20YS1";
 		const url = `https://wcp-cloud-foundry-jenkins.swg-devops.com/job/${jobName}/build`;
 		console.log(`Calling ${url} with ${userName} and ${password.replace(/./g, "*")}`);
