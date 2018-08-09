@@ -71,7 +71,6 @@ func (shellPlugin *CloudShellPlugin) invokeRun(context plugin.PluginContext, cmd
 	} else {
 		stdoutStderr, err := cmd.CombinedOutput()
 		cmd.Run()
-		fmt.Printf("stdoutStderr: %s", stdoutStderr)
 		if err != nil {
 			if err.Error() == "exit status 126" {
 				trace.Logger.Println("This is a non-headless command, retry as non-headless!")
@@ -87,6 +86,7 @@ func (shellPlugin *CloudShellPlugin) invokeRun(context plugin.PluginContext, cmd
 			fmt.Println("headless command failed!")
 			fmt.Println(err)
 		}
+		fmt.Printf("stdoutStderr: %s", stdoutStderr)
 	}
 }
 
