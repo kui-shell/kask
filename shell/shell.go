@@ -52,7 +52,8 @@ func (shellPlugin *CloudShellPlugin) Run(context plugin.PluginContext, args []st
 	}
 
 	cmd, err := shellPlugin.DownloadDistIfNecessary(context, headless)
-	if err != nil {os.Exit(1)
+	if err != nil {
+		os.Exit(1)
 		return
 	}
 	shellPlugin.invokeRun(context, cmd, shellArgs, headless)
