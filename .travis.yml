@@ -19,7 +19,7 @@ before_script:
   - go get "github.com/stretchr/testify/suite"
 script:
   - go vet $(go list ./... | grep -v "vendor")
-  -
+  - |
     if [[ "$TRAVIS_BRANCH" == "deploy_qa" ]] || [[ "$TRAVIS_BRANCH" == "deploy_prod" ]]; then
       go test ./...
       echo "test against qa and prod"
