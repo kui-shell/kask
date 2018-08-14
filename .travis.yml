@@ -19,7 +19,14 @@ before_script:
   - go get "github.com/stretchr/testify/suite"
 script:
   - go vet $(go list ./... | grep -v "vendor")
-  - go test ./...
+  -
+    case "$TRAVIS_BRANCH" in
+          deploy_qa)
+          deploy_prod)
+            go test ./..."
+            ;;
+          default)
+            CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
   - bin/build-all.sh
   - export PLUGIN_VERSION=`out/function-composer-linux-amd64 version`
   - echo "Plugin version is ${PLUGIN_VERSION}"
