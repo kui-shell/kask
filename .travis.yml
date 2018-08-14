@@ -20,13 +20,11 @@ before_script:
 script:
   - go vet $(go list ./... | grep -v "vendor")
   -
-    case "$TRAVIS_BRANCH" in
-          deploy_qa)
-          deploy_prod)
-            go test ./..."
-            ;;
-          default)
-            CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
+    if [[ "$TRAVIS_BRANCH" != deploy_qa &&  "$TRAVIS_BRANCH" != deploy_prod ]]; then
+      go test ./..."
+    else
+      CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
+    fi
   - bin/build-all.sh
   - export PLUGIN_VERSION=`out/function-composer-linux-amd64 version`
   - echo "Plugin version is ${PLUGIN_VERSION}"
