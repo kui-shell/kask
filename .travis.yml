@@ -24,6 +24,7 @@ script:
       go test ./...
       echo "test against qa and prod"
     else
+      echo $TRAVIS_BRANCH
       CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
     fi
   - bin/build-all.sh
