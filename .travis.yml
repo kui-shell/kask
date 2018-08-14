@@ -20,7 +20,7 @@ before_script:
 script:
   - go vet $(go list ./... | grep -v "vendor")
   -
-    if [[ "$TRAVIS_BRANCH" == "deploy_qa" || "$TRAVIS_BRANCH" == "deploy_prod" ]]; then
+    if [[ "$TRAVIS_BRANCH" == "deploy_qa" ]] || [[ "$TRAVIS_BRANCH" == "deploy_prod" ]]; then
       go test ./..."
     else
       CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
