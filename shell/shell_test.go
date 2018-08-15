@@ -60,7 +60,7 @@ func (suite *ShellCmdTestSuite) TestRunDownloadDistNonHeadless() {
 
 	// Run shell command
 	shell.Args = append(shell.Args, "version")
-	shell.Env = append(os.Environ(), "FSH_HEADLESS=true")
+	shell.Env = append(os.Environ(), "FSH_HEADLESS=true", "CLOUD_SHELL_GO=true")
 	stdout, err := shell.CombinedOutput()
 	shell.Run()
 	version := string(stdout[:])

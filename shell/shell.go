@@ -192,8 +192,10 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	command := GetRootCommand(extractedDir, headless)
+	command.Env = append(os.Environ(), "CLOUD_SHELL_GO=true")
+
 	if headlessCommand {
-		command.Env = append(os.Environ(), "FSH_HEADLESS=true")
+		command.Env = append(command.Env, "FSH_HEADLESS=true")
 	}
 	if !file_helpers.FileExists(successFile) {
 		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
