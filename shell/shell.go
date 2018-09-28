@@ -83,10 +83,13 @@ func (shellPlugin *CloudShellPlugin) invokeRun(context plugin.PluginContext, cmd
 				shellPlugin.invokeRun(context, cmd, shellArgs, headless)
 				return;
 			}
-			fmt.Println("headless command failed!")
-			fmt.Println(err)
+
+			fmt.Printf("%s", stdoutStderr)
+			var arr []string = strings.Split(err.Error(), " ")
+			os.Exit(toInt(arr[len(arr) - 1]))	// return with the exit code of subprocess
+			return;
 		}
-		fmt.Printf("stdoutStderr: %s", stdoutStderr)
+		fmt.Printf("%s", stdoutStderr)
 	}
 }
 
