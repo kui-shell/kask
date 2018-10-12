@@ -150,7 +150,7 @@ func GetDistLocation(version string, headless bool) string {
 }
 
 func IsCommandHeadless(shellArgs []string) bool {
-	isShell := len(shellArgs) > 0 && (shellArgs[0] == "shell" || shellArgs[0] == "preview")
+	isShell := len(shellArgs) > 0 && (shellArgs[0] == "shell")
 	return !isShell
 }
 
