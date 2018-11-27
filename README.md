@@ -35,11 +35,11 @@ $ bluemix plugin install ./cloud-shell-cli
 
 For example:
 ```
-ibmcloud shell host get
+ibmcloud kui host get
 ```
 
 ```
-ibmcloud fsh shell
+ibmcloud kui shell
 ```
 
 # CI Process

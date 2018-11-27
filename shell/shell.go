@@ -109,17 +109,17 @@ func GetDistOSSuffix(headless bool) string {
 
 func GetRootCommand(extractedDir string, headless bool) *exec.Cmd {
 	if headless {
-		return exec.Command("node", filepath.Join(extractedDir, "cloudshell/bin/fsh"))
+		return exec.Command("node", filepath.Join(extractedDir, "kui/bin/kui"))
 	}
 	switch runtime.GOOS {
 	case "windows":
 		// TODO verify
-		return exec.Command(filepath.Join(extractedDir, "IBM Cloud Shell-win32-x64\\IBM Cloud Shell.exe"))
+		return exec.Command(filepath.Join(extractedDir, "Kui-win32-x64\\Kui.exe"))
 	case "darwin":
-		return exec.Command(filepath.Join(extractedDir, "IBM Cloud Shell-darwin-x64/IBM Cloud Shell.app/Contents/MacOS/IBM Cloud Shell"))
+		return exec.Command(filepath.Join(extractedDir, "Kui-darwin-x64/Kui.app/Contents/MacOS/Kui"))
 	default:
 		// TODO verify
-		return exec.Command(filepath.Join(extractedDir, "IBM Cloud Shell-linux-x64/IBM Cloud Shell"))
+		return exec.Command(filepath.Join(extractedDir, "Kui-linux-x64/Kui"))
 	}
 }
 
@@ -198,7 +198,7 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 	command.Env = append(os.Environ(), "CLOUD_SHELL_GO=true")
 
 	if headlessCommand {
-		command.Env = append(command.Env, "FSH_HEADLESS=true")
+		command.Env = append(command.Env, "KUI_HEADLESS=true")
 	}
 	if !file_helpers.FileExists(successFile) {
 		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
@@ -220,12 +220,12 @@ func (p *CloudShellPlugin) DownloadDistIfNecessary(context plugin.PluginContext,
 
 		trace.Logger.Println("Extracting shell to " + extractedDir)
 		if strings.HasSuffix(url, ".tar.bz2") {
-			if err := archiver.TarBz2.Open(downloadedFile, extractedDir); err != nil {
+			if err := archiver.DefaultTarBz2.Unarchive(downloadedFile, extractedDir); err != nil {
 				handleError(err, p.ui)
 				return nil, err
 			}
 		} else {
-			if err := archiver.Zip.Open(downloadedFile, extractedDir); err != nil {
+			if err := archiver.DefaultZip.Unarchive(downloadedFile, extractedDir); err != nil {
 				handleError(err, p.ui)
 				return nil, err
 			}
@@ -260,7 +260,7 @@ func (shellPlugin *CloudShellPlugin) GetMetadata() plugin.PluginMetadata {
 		Commands: []plugin.Command{
 			{
 				Name:        "shell",
-				Alias:       "fsh",
+				Alias:       "kui",
 				Description: "Function composer",
 				Usage:       "ibmcloud shell",
 			},
