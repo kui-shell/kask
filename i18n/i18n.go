@@ -5,8 +5,8 @@ import (
 	"strings"
 	goi18n "github.com/nicksnyder/go-i18n/i18n"
 	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/bluemix/configuration/core_config"
-	"github.ibm.com/composer/cloud-shell-cli/i18n/detection"
-	"github.ibm.com/composer/cloud-shell-cli/resources"
+	"github.com/kui-shell/kask/i18n/detection"
+	"github.com/kui-shell/kask/resources"
 	"github.com/IBM-Bluemix/bluemix-cli-sdk/bluemix/trace"
 )
 

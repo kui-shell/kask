@@ -1,9 +1,9 @@
-package kask
+package kui
 
 import (
 	"fmt"
 	"github.com/mholt/archiver"
-	. "github.ibm.com/composer/cloud-shell-cli/i18n"
+	. "github.com/kui-shell/kask/i18n"
 	"log"
 	"io"
 	"net/http"
@@ -15,19 +15,29 @@ import (
 	"strings"
 )
 
-type KrewComponent struct {
+type KrewComponent interface {
+	init()
+}
+
+type KuiComponent struct {
 }
 
 type Context interface {
-	PluginDirectory() string
+	PluginDirectory() (string, error)
 }
 
 // THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
 const PLUGIN_VERSION = "dev"
 
 type MainContext struct {}
-func (MainContext) PluginDirectory() string {
-	return "/tmp/nicko"
+func (MainContext) PluginDirectory() (string, error) {
+	home, err := os.UserHomeDir()
+	if err == nil {
+		return filepath.Join(home, ".kask"), nil
+	} else {
+		handleError(err)
+		return "", err
+	}
 }
 
 func Start() {
@@ -38,15 +48,15 @@ func Start() {
 		return
 	}
 
-	runner := KrewComponent{}
+	runner := KuiComponent{}
 	context := MainContext{}
 	runner.Run(context, os.Args)
 }
 
-func (p *KrewComponent) init() {
+func (component *KuiComponent) init() {
 }
 
-func (component *KrewComponent) Run(context Context, args []string) {
+func (component *KuiComponent) Run(context Context, args []string) {
 	component.init()
 	kaskArgs := args[1:]
 
@@ -58,7 +68,7 @@ func (component *KrewComponent) Run(context Context, args []string) {
 	component.invokeRun(context, cmd, kaskArgs)
 }
 
-func (component *KrewComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string) {
+func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string) {
 	cmd.Args = append(cmd.Args, kaskArgs...)
 
 	log.Println(cmd.Args)
@@ -108,7 +118,7 @@ func GetDistLocation(version string) string {
 	*/
 
 	host := "https://s3-api.us-geo.objectstorage.softlayer.net/kui-" + version
-	DEV_OVERRIDE_HOST, overrideSet := os.LookupEnv("CLOUDSHELL_DIST")
+	DEV_OVERRIDE_HOST, overrideSet := os.LookupEnv("KUI_DIST")
 	if overrideSet {
 		host = DEV_OVERRIDE_HOST
 	}
@@ -141,17 +151,23 @@ func DownloadFile(filepath string, url string) error {
     return err
 }
 
-func (p *KrewComponent) DownloadDistIfNecessary(context Context) (*exec.Cmd, error) {
+func (p *KuiComponent) DownloadDistIfNecessary(context Context) (*exec.Cmd, error) {
 
 	metadata := p.GetMetadata()
 	version := metadata.Version.String()
 
 	url := GetDistLocation(version)
 
-	targetDir := filepath.Join(context.PluginDirectory(), "/cache-"+version)
+	pluginDir, err := context.PluginDirectory()
+	if err != nil {
+		handleError(err)
+		return nil, err
+	}
+
+	targetDir := filepath.Join(pluginDir, "/cache-"+version)
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
-	log.Printf("successFile %s", successFile)
+	log.Printf("successFile, yo %s", successFile)
 
 	command := GetRootCommand(extractedDir)
 	command.Env = os.Environ()
@@ -215,9 +231,9 @@ type Metadata struct {
 	Commands []Command
 }
 
-func (component *KrewComponent) GetMetadata() Metadata {
+func (component *KuiComponent) GetMetadata() Metadata {
 	return Metadata{
-		Name:    "function-composer",
+		Name:    "kask",
 		Version: GetVersion(),
 		Commands: []Command{
 			{

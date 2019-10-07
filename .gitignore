@@ -21,5 +21,4 @@ node_modules/*
 bin/node_modules/*
 
 # local testing binaries
-shell
-shell-cli
+kask

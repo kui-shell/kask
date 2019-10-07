@@ -1,48 +1,11 @@
-group: bluezone
 language: go
-dist: trusty
 go:
-  - 1.9.2
-addons:
-  ssh_known_hosts: bluemix-cli-build.mybluemix.net
-env:
-  global:
-    - REPO_SERVER=bluemix-cli-build.mybluemix.net
-    - REPO_BASE=/home/builder/builds
-    - REPO_USER=builder
+  - 1.12
 install: true
 before_script:
-  - node -v
-  - pushd bin && npm install && popd
-  - sudo apt-get install lftp
   - go get
   - go get "github.com/stretchr/testify/suite"
 script:
   - go vet $(go list ./... | grep -v "vendor")
-  - |
-    if [[ "$TRAVIS_BRANCH" == "deploy_qa" ]] || [[ "$TRAVIS_BRANCH" == "deploy_prod" ]]; then
-      go test ./...
-    else
-      CLOUDSHELL_DIST=https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev bash -c "go test ./..."
-    fi
-  - bin/build-all.sh
-  - export PLUGIN_VERSION=`out/function-composer-linux-amd64 version`
-  - echo "Plugin version is ${PLUGIN_VERSION}"
-deploy:
-  - provider: script
-    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/dev/ ${PLUGIN_VERSION} ${COS_API_KEY}
-    skip_cleanup: true
-    on:
-      branch: master
-  - provider: script
-    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/qa/ ${PLUGIN_VERSION} ${COS_API_KEY} && node bin/gen-and-update-ys1.js ${PLUGIN_VERSION} "composer@us.ibm.com" "${COMPOSER_USER_PASSWORD}"
-    skip_cleanup: true
-    on:
-      branch: deploy_qa
-  - provider: script
-    script: bin/deploy.sh https://s3-api.us-geo.objectstorage.softlayer.net/shelldist/prod/ ${PLUGIN_VERSION} ${COS_API_KEY}
-    skip_cleanup: true
-    on:
-      branch: deploy_prod
-notifications:
-  slack: watsondataplatform:9aFO9Dv1PIq1YenObXn9dGqK
+  - go test ./...
+  - go build
