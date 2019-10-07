@@ -1,4 +1,4 @@
-package shell
+package kask
 
 import (
 	"testing"
@@ -8,10 +8,7 @@ import (
 	"path/filepath"
 
 	"github.ibm.com/composer/cloud-shell-cli/i18n"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/plugin/pluginfakes"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/testhelpers/terminal"
 	"github.com/stretchr/testify/suite"
-	"github.com/IBM-Cloud/ibm-cloud-cli-sdk/common/file_helpers"
 )
 
 type ShellCmdTestSuite struct {
