@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"github.com/mholt/archiver"
 	. "github.com/kui-shell/kask/i18n"
-	"log"
+	log "go.uber.org/zap"
+	baselog "log"
 	"io"
 	"net/http"
 	"os"
@@ -24,32 +25,40 @@ type KuiComponent struct {
 
 type Context interface {
 	PluginDirectory() (string, error)
+	logger() *log.SugaredLogger
 }
 
 // THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
 const PLUGIN_VERSION = "dev"
 
-type MainContext struct {}
-func (MainContext) PluginDirectory() (string, error) {
+type MainContext struct {
+	_logger *log.SugaredLogger
+}
+func (context MainContext) PluginDirectory() (string, error) {
 	home, err := os.UserHomeDir()
 	if err == nil {
 		return filepath.Join(home, ".kask"), nil
 	} else {
-		handleError(err)
+		handleError(context, err)
 		return "", err
 	}
 }
+func (context MainContext) logger() *log.SugaredLogger {
+	return context._logger
+}
+func (context *MainContext) initDefault()(*MainContext) {
+	logger, err := log.NewDevelopment()
+	if err != nil {
+		baselog.Fatalf("can't initialize zap logger: %v", err)
+	}
+	context._logger = logger.Sugar()
+	return context
+}
 
 func Start() {
-	argsWithoutProg := os.Args[1:]
-	if len(argsWithoutProg) > 0 && argsWithoutProg[0] == "version" {
-		version := GetVersion()
-		fmt.Println(version.String())
-		return
-	}
-
 	runner := KuiComponent{}
 	context := MainContext{}
+	context.initDefault()
 	runner.Run(context, os.Args)
 }
 
@@ -60,7 +69,9 @@ func (component *KuiComponent) Run(context Context, args []string) {
 	component.init()
 	kaskArgs := args[1:]
 
-	cmd, err := component.DownloadDistIfNecessary(context)
+	force := os.Getenv("REFETCH") == "true"
+
+	cmd, err := component.DownloadDistIfNecessary(context, force)
 	if err != nil {
 		os.Exit(1)
 		return
@@ -70,8 +81,6 @@ func (component *KuiComponent) Run(context Context, args []string) {
 
 func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string) {
 	cmd.Args = append(cmd.Args, kaskArgs...)
-
-	log.Println(cmd.Args)
 
 	if err := cmd.Start(); err != nil {
 		fmt.Println("command failed!")
@@ -151,7 +160,11 @@ func DownloadFile(filepath string, url string) error {
     return err
 }
 
-func (p *KuiComponent) DownloadDistIfNecessary(context Context) (*exec.Cmd, error) {
+func (p *KuiComponent) DownloadDistIfNecessary(context Context, force bool) (*exec.Cmd, error) {
+	Debug := context.logger().Debug
+	Debugf := context.logger().Debugf
+
+	Debugf("force refetch? %v", force)
 
 	metadata := p.GetMetadata()
 	version := metadata.Version.String()
@@ -160,17 +173,28 @@ func (p *KuiComponent) DownloadDistIfNecessary(context Context) (*exec.Cmd, erro
 
 	pluginDir, err := context.PluginDirectory()
 	if err != nil {
-		handleError(err)
+		handleError(context, err)
 		return nil, err
 	}
 
 	targetDir := filepath.Join(pluginDir, "/cache-"+version)
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
-	log.Printf("successFile, yo %s", successFile)
+	Debugf("targetDir %s", targetDir)
 
 	command := GetRootCommand(extractedDir)
-	command.Env = os.Environ()
+	command.Env = append(os.Environ(), "KUI_COMMAND_CONTEXT=plugin")
+
+	if force {
+		err := os.Remove(successFile)
+		if err != nil {
+			Debugf("error removing lock file %v", err)
+		}
+		err2 := os.RemoveAll(extractedDir)
+		if err2 != nil {
+			Debugf("error removing unpack %v", err2)
+		}
+	}
 
 	if _, err := os.Stat(successFile); err != nil {
 		downloadedFile := filepath.Join(targetDir, "downloaded.zip")
@@ -179,32 +203,33 @@ func (p *KuiComponent) DownloadDistIfNecessary(context Context) (*exec.Cmd, erro
 		os.MkdirAll(extractedDir, 0700)
 
 		if err := DownloadFile(downloadedFile, url); err != nil {
-			handleError(err)
+			handleError(context, err)
 			return nil, err
 		}
-		log.Println("Downloaded kui-base to " + downloadedFile)
 
-		log.Println("Extracting kui-base to " + extractedDir)
+		Debugf("Downloaded kui-base %s", downloadedFile)
+		Debugf("Extracting kui-base %s", extractedDir)
+
 		if strings.HasSuffix(url, ".tar.bz2") {
 			if err := archiver.DefaultTarBz2.Unarchive(downloadedFile, extractedDir); err != nil {
-				handleError(err)
+				handleError(context, err)
 				return nil, err
 			}
 		} else {
 			if err := archiver.DefaultZip.Unarchive(downloadedFile, extractedDir); err != nil {
-				handleError(err)
+				handleError(context, err)
 				return nil, err
 			}
 		}
 
-		log.Println("Extracted kui-base to " + extractedDir)
+		Debugf("Extracted kui-base %s", extractedDir)
 
 		if _, err := os.OpenFile(successFile, os.O_RDONLY|os.O_CREATE, 0666); err != nil {
-			handleError(err)
+			handleError(context, err)
 			return nil, err
 		}
 	} else {
-		log.Println("Using cached download")
+		Debug("Using cached download")
 	}
 
 	return command, nil
@@ -246,12 +271,12 @@ func (component *KuiComponent) GetMetadata() Metadata {
 	}
 }
 
-func handleError(err error) {
+func handleError(context Context, err error) {
 	switch err {
 	case nil:
 		return
 	default:
-		log.Fatal(T("An error has occurred:\n{{.Error}}\n", map[string]interface{}{"Error": err.Error()}))
+		context.logger().Errorw("msg", T("An error has occurred:\n{{.Error}}\n", map[string]interface{}{"Error": err.Error()}))
 	}
 
 	return

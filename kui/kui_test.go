@@ -39,7 +39,7 @@ func (suite *KaskTestSuite) TearDownSuite() {
 }
 
 func (suite *KaskTestSuite) TestRunDownload() {
-	kui, err := suite.cmd.DownloadDistIfNecessary(suite.pluginContext)
+	kui, err := suite.cmd.DownloadDistIfNecessary(suite.pluginContext, false)
 	path, err := suite.pluginContext.PluginDirectory()
 	suite.Nil(err)
 	successFile := filepath.Join(path, "/cache-" + suite.version, "success")
@@ -55,5 +55,5 @@ func (suite *KaskTestSuite) TestRunDownload() {
 }
 
 func createDefaultFakePluginContext(saveDir string) *MainContext {
-	return new(MainContext)
+	return new(MainContext).initDefault()
 }
