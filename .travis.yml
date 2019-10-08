@@ -1,10 +1,18 @@
 language: go
 go:
   - 1.12
+
+os:
+  - linux
+  - osx
+  - windows
+
 install: true
+
 before_script:
   - go get
   - go get "github.com/stretchr/testify/suite"
+
 script:
   - go vet $(go list ./... | grep -v "vendor")
   - go test ./...
