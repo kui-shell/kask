@@ -112,20 +112,6 @@ func GetRootCommand(extractedDir string) *exec.Cmd {
 }
 
 func GetDistLocation(version string) string {
-	/*
-		production distributions:
-			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-1.14.0/IBM%20Cloud%20Shell-darwin-x64.zip
-			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-1.14.0/IBM%20Cloud%20Shell-win32-x64.zip
-			https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-1.14.0/IBM%20Cloud%20Shell-linux-x64.zip
-
-		dev distributions:
-			win32: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-win32-x64.zip
-			macOS zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.zip
-			macOS tar.bz2: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-darwin-x64.tar.bz2
-			linux-zip: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-linux-x64.zip
-			headless: https://s3-api.us-geo.objectstorage.softlayer.net/ibm-cloud-shell-dev/IBM%20Cloud%20Shell-headless.zip
-	*/
-
 	host := "https://s3-api.us-geo.objectstorage.softlayer.net/kui-" + version
 	DEV_OVERRIDE_HOST, overrideSet := os.LookupEnv("KUI_DIST")
 	if overrideSet {
