@@ -10,7 +10,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -76,11 +78,28 @@ func (component *KuiComponent) Run(context Context, args []string) {
 		os.Exit(1)
 		return
 	}
+
+	base := path.Base(args[0])
+	r := regexp.MustCompile("^kubectl-")
+	var kuiCommandContext string
+	if r.MatchString(base) {
+		kuiCommandContext = r.ReplaceAllString(base, "")
+	} else {
+		kuiCommandContext = "plugin"
+	}
+	context.logger().Debugf("command context: %s", kuiCommandContext)
+	cmd.Env = append(cmd.Env, "KUI_COMMAND_CONTEXT=" + kuiCommandContext)
+	context.logger().Debugf("env: %v", cmd.Env)
+
 	component.invokeRun(context, cmd, kaskArgs)
 }
 
 func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string) {
 	cmd.Args = append(cmd.Args, kaskArgs...)
+	context.logger().Debugf("args %s", cmd.Args)
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
 
 	if err := cmd.Start(); err != nil {
 		fmt.Println("command failed!")
@@ -90,11 +109,11 @@ func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArg
 func GetDistOSSuffix() string {
 	switch runtime.GOOS {
 	case "windows":
-		return "-win32-x64.zip"
+		return "-base-win32-x64.zip"
 	case "darwin":
-		return "-darwin-x64.tar.bz2"
+		return "-base-darwin-x64.tar.bz2"
 	default:
-		return "-linux-x64.zip"
+		return "-base-linux-x64.zip"
 	}
 }
 
@@ -102,12 +121,12 @@ func GetRootCommand(extractedDir string) *exec.Cmd {
 	switch runtime.GOOS {
 	case "windows":
 		// TODO verify
-		return exec.Command(filepath.Join(extractedDir, "Kui-win32-x64\\Kui.exe"))
+		return exec.Command(filepath.Join(extractedDir, "Kui-base-win32-x64\\Kui.exe"))
 	case "darwin":
-		return exec.Command(filepath.Join(extractedDir, "Kui-darwin-x64/Kui.app/Contents/MacOS/Kui"))
+		return exec.Command(filepath.Join(extractedDir, "Kui-base-darwin-x64/Kui.app/Contents/MacOS/Kui"))
 	default:
 		// TODO verify
-		return exec.Command(filepath.Join(extractedDir, "Kui-linux-x64/Kui"))
+		return exec.Command(filepath.Join(extractedDir, "Kui-base-linux-x64/Kui"))
 	}
 }
 
@@ -169,7 +188,7 @@ func (p *KuiComponent) DownloadDistIfNecessary(context Context, force bool) (*ex
 	Debugf("targetDir %s", targetDir)
 
 	command := GetRootCommand(extractedDir)
-	command.Env = append(os.Environ(), "KUI_COMMAND_CONTEXT=plugin")
+	command.Env = os.Environ()
 
 	if force {
 		err := os.Remove(successFile)
