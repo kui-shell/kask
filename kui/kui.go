@@ -33,6 +33,11 @@ type Context interface {
 // THE PLUGIN_VERSION CONSTANT SHOULD BE LEFT EXACTLY AS-IS SINCE IT CAN BE PROGRAMMATICALLY SUBSTITUTED
 const PLUGIN_VERSION = "dev"
 
+// the command context to use for Kui command execution; this will be
+// the default, if we cannot infer one from e.g. the executable name
+// (whereby "kubectl-foo" implies a command context of "foo")
+const defaultCommandContext = "plugin"
+
 type MainContext struct {
 	_logger *log.SugaredLogger
 }
@@ -100,7 +105,10 @@ func (component *KuiComponent) Run(context Context, args []string) {
 	if r.MatchString(base) {
 		kuiCommandContext = r.ReplaceAllString(base, "")
 	} else {
-		kuiCommandContext = "plugin"
+		kuiCommandContext = defaultCommandContext
+	}
+	if kuiCommandContext == "kask" {
+		kuiCommandContext = defaultCommandContext
 	}
 	context.logger().Debugf("command context: %s", kuiCommandContext)
 	cmd.Env = append(cmd.Env, "KUI_COMMAND_CONTEXT=" + kuiCommandContext)
