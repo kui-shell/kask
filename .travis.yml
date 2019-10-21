@@ -7,7 +7,8 @@ os:
 #  - osx
   - windows
 
-install: true
+install:
+  - # skip
 
 before_script:
   - go get
@@ -17,3 +18,13 @@ script:
   - go vet $(go list ./... | grep -v "vendor")
   - go test ./...
   - go build
+
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: curl -sL https://git.io/goreleaser | bash
+  on:
+    repo: kui-shell/kask
+    branch: master
+    tags: true
+    condition: $TRAVIS_OS_NAME = linux
