@@ -69,14 +69,21 @@ func (component *KuiComponent) init() {
 
 func (component *KuiComponent) Run(context Context, args []string) {
 	component.init()
-	kaskArgs := args[1:]
+	refreshRequested := args[1] == "refresh"
+	context.logger().Debugf("refreshRequested? %v", refreshRequested)
 
-	force := os.Getenv("REFETCH") == "true"
-
-	cmd, err := component.DownloadDistIfNecessary(context, force)
+	cmd, err := component.DownloadDistIfNecessary(context, refreshRequested)
 	if err != nil {
 		os.Exit(1)
 		return
+	}
+
+	var kaskArgs []string
+	if refreshRequested {
+		context.logger().Debug("refresh done")
+		kaskArgs = []string{"version"}
+	} else {
+		kaskArgs = args[1:]
 	}
 
 	base := path.Base(args[0])
@@ -89,7 +96,6 @@ func (component *KuiComponent) Run(context Context, args []string) {
 	}
 	context.logger().Debugf("command context: %s", kuiCommandContext)
 	cmd.Env = append(cmd.Env, "KUI_COMMAND_CONTEXT=" + kuiCommandContext)
-	context.logger().Debugf("env: %v", cmd.Env)
 
 	component.invokeRun(context, cmd, kaskArgs)
 }
@@ -182,13 +188,21 @@ func (p *KuiComponent) DownloadDistIfNecessary(context Context, force bool) (*ex
 		return nil, err
 	}
 
+	binDir := filepath.Join(pluginDir, "bin")
 	targetDir := filepath.Join(pluginDir, "/cache-"+version)
 	successFile := filepath.Join(targetDir, "success")
 	extractedDir := filepath.Join(targetDir, "extract")
 	Debugf("targetDir %s", targetDir)
 
+	executable, err := os.Executable()
+	if err != nil {
+		handleError(context, err)
+		return nil, err
+	}
+	basenameOfSelf := filepath.Base(executable)
+
 	command := GetRootCommand(extractedDir)
-	command.Env = os.Environ()
+	command.Env = append(os.Environ(), "KUI_BIN_DIR=" + binDir, "KUI_BIN_PREFIX=kubectl-", "KUI_BIN=" + executable, "KUI_DEFAULT_PRETTY_TYPE=" + basenameOfSelf)
 
 	if force {
 		err := os.Remove(successFile)
@@ -211,6 +225,12 @@ func (p *KuiComponent) DownloadDistIfNecessary(context Context, force bool) (*ex
 			handleError(context, err)
 			return nil, err
 		}
+
+		// link ourselves to kubectl-<basename>
+		targetOfSymlink := filepath.Join(binDir, "kubectl-" + basenameOfSelf)
+		os.Remove(targetOfSymlink)
+		os.Symlink(executable, targetOfSymlink)
+		Debugf("Symlinked ourselves to %s", targetOfSymlink)
 
 		Debugf("Downloaded kui-base %s", downloadedFile)
 		Debugf("Extracting kui-base %s", extractedDir)
