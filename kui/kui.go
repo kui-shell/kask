@@ -80,8 +80,25 @@ func Start() {
 func (component *KuiComponent) init() {
 }
 
+func blue(str string) string {
+	return fmt.Sprintf("\033[0;34m%s\033[0m", str)
+}
+func cyan(str string) string {
+	return fmt.Sprintf("\033[0;36m%s\033[0m", str)
+}
+func yellow(str string) string {
+	return fmt.Sprintf("\033[0;33m%s\033[0m", str)
+}
+
 func (component *KuiComponent) Run(context Context, args []string) {
 	component.init()
+
+	if len(args) == 1 {
+		fmt.Printf("Usage: %v\n\n%v\n%v\tUpdate the local UI code\n%v\tPrint the version of the UI code", cyan("kask <command>"), yellow("Commands:"), blue("refresh"), blue("version"))
+		os.Exit(1)
+		return
+	}
+
 	refreshRequested := args[1] == "refresh"
 	context.logger().Debugf("refreshRequested? %v", refreshRequested)
 

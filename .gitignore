@@ -22,3 +22,6 @@ bin/node_modules/*
 
 # local testing binaries
 kask
+
+# emacs temps
+*~
