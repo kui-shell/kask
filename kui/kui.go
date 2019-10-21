@@ -48,8 +48,16 @@ func (context MainContext) PluginDirectory() (string, error) {
 func (context MainContext) logger() *log.SugaredLogger {
 	return context._logger
 }
+func initLogger()(*log.Logger, error) {
+	_, debugSet := os.LookupEnv("DEBUG")
+	if debugSet {
+		return log.NewDevelopment()
+	} else {
+		return log.NewProduction()
+	}
+}
 func (context *MainContext) initDefault()(*MainContext) {
-	logger, err := log.NewDevelopment()
+	logger, err := initLogger()
 	if err != nil {
 		baselog.Fatalf("can't initialize zap logger: %v", err)
 	}
