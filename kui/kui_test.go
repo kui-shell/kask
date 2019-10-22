@@ -55,5 +55,6 @@ func (suite *KaskTestSuite) TestRunDownload() {
 }
 
 func createDefaultFakePluginContext(saveDir string) *MainContext {
-	return new(MainContext).initDefault()
+	context := initDefault("dev", "", "unknown")
+	return &context
 }

@@ -18,13 +18,6 @@ import (
 	"strings"
 )
 
-// version information that will come from goreleaser
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
-
 type KrewComponent interface {
 	init()
 }
@@ -46,6 +39,9 @@ const PLUGIN_VERSION = "dev"
 const defaultCommandContext = "plugin"
 
 type MainContext struct {
+	version string
+	commit string
+	date string
 	_logger *log.SugaredLogger
 }
 func (context MainContext) PluginDirectory() (string, error) {
@@ -68,19 +64,18 @@ func initLogger()(*log.Logger, error) {
 		return log.NewProduction()
 	}
 }
-func (context *MainContext) initDefault()(*MainContext) {
+func initDefault(version string, commit string, date string)(MainContext) {
 	logger, err := initLogger()
 	if err != nil {
 		baselog.Fatalf("can't initialize zap logger: %v", err)
 	}
-	context._logger = logger.Sugar()
-	return context
+	_logger := logger.Sugar()
+	return MainContext{ version, commit, date, _logger }
 }
 
-func Start() {
+func Start(version string, commit string, date string) {
 	runner := KuiComponent{}
-	context := MainContext{}
-	context.initDefault()
+	context := initDefault(version, commit, date)
 	runner.Run(context, os.Args)
 }
 
@@ -106,7 +101,7 @@ const (
 )
 type ExecStyle int
 
-func (component *KuiComponent) Run(context Context, args []string) {
+func (component *KuiComponent) Run(context MainContext, args []string) {
 	component.init()
 
 	if len(args) == 1 || (len(args) == 2 && (args[1] == "-h" || args[1] == "--help")) {
@@ -167,7 +162,7 @@ func (component *KuiComponent) Run(context Context, args []string) {
 
 	if arg == "version" {
 		// also report our version
-		fmt.Printf("%v\t%v %v\n%v\t", blue(base), version, date, blue("kui"))
+		fmt.Printf("%v\t%v %v\n%v\t", blue(base), context.version, context.date, blue("kui"))
 	}
 
 	component.invokeRun(context, cmd, kaskArgs, style)
