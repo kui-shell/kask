@@ -104,8 +104,10 @@ type ExecStyle int
 func (component *KuiComponent) Run(context MainContext, args []string) {
 	component.init()
 
+	base := path.Base(args[0])
+
 	if len(args) == 1 || (len(args) == 2 && (args[1] == "-h" || args[1] == "--help")) {
-		fmt.Printf("Usage: %v\n\n", cyan("kask <command>"))
+		fmt.Printf("Usage: %v\n\n", cyan(base + " <command>"))
 		fmt.Printf("%v\n", yellow("Commands:"))
 		fmt.Printf("%v\t\tList installed plugins\n", blue("list"))
 		fmt.Printf("%v\tShow commands offered by a plugin\n", blue("commands"))
@@ -136,7 +138,6 @@ func (component *KuiComponent) Run(context MainContext, args []string) {
 		kaskArgs = args[1:]
 	}
 
-	base := path.Base(args[0])
 	r := regexp.MustCompile("^kubectl-")
 	var kuiCommandContext string
 	if r.MatchString(base) {
@@ -152,7 +153,7 @@ func (component *KuiComponent) Run(context MainContext, args []string) {
 
 	var style ExecStyle = ExecWithStart
 	arg := kaskArgs[0]
-	if arg == "install" || arg == "uninstall" || arg == "list" || arg == "version" || arg == "commands" {
+	if arg == "install" || arg == "remove" || arg == "uninstall" || arg == "list" || arg == "version" || arg == "commands" {
 		if len(kaskArgs) == 1 || kaskArgs[1] != "--ui" {
 			context.logger().Debug("using headless mode")
 			cmd.Env = append(cmd.Env, "KUI_HEADLESS=true")
