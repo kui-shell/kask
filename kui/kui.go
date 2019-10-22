@@ -18,6 +18,13 @@ import (
 	"strings"
 )
 
+// version information that will come from goreleaser
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type KrewComponent interface {
 	init()
 }
@@ -158,7 +165,17 @@ func (component *KuiComponent) Run(context Context, args []string) {
 		}
 	}
 
+	if arg == "version" {
+		// also report our version
+		fmt.Printf("%v\t%v %v\n%v\t", blue(base), version, date, blue("kui"))
+	}
+
 	component.invokeRun(context, cmd, kaskArgs, style)
+
+	if arg == "version" {
+		// missing trailing newline; fixing here for now
+		fmt.Print("\n")
+	}
 }
 
 func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string, style ExecStyle) {
