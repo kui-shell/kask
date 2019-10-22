@@ -89,12 +89,30 @@ func cyan(str string) string {
 func yellow(str string) string {
 	return fmt.Sprintf("\033[0;33m%s\033[0m", str)
 }
+func gray(str string) string {
+	return fmt.Sprintf("\033[2m%s\033[0m", str)
+}
+
+const (
+	ExecWithStart = iota
+	ExecWithRun = iota
+)
+type ExecStyle int
 
 func (component *KuiComponent) Run(context Context, args []string) {
 	component.init()
 
-	if len(args) == 1 {
-		fmt.Printf("Usage: %v\n\n%v\n%v\tUpdate the local UI code\n%v\tPrint the version of the UI code", cyan("kask <command>"), yellow("Commands:"), blue("refresh"), blue("version"))
+	if len(args) == 1 || (len(args) == 2 && (args[1] == "-h" || args[1] == "--help")) {
+		fmt.Printf("Usage: %v\n\n", cyan("kask <command>"))
+		fmt.Printf("%v\n", yellow("Commands:"))
+		fmt.Printf("%v\t\tList installed plugins\n", blue("list"))
+		fmt.Printf("%v\tShow commands offered by a plugin\n", blue("commands"))
+		fmt.Printf("%v\t\tInstall a plugin\n", blue("install"))
+		fmt.Printf("%v\tRemove a previously installed plugin\n", blue("uninstall"))
+
+		fmt.Printf("\n%v\n", yellow("Admin Commands:"))
+		fmt.Printf("%v\t\tUpdate the local UI code\n", blue("refresh"))
+		fmt.Printf("%v\t\tPrint the current version", blue("version"))
 		os.Exit(1)
 		return
 	}
@@ -130,19 +148,35 @@ func (component *KuiComponent) Run(context Context, args []string) {
 	context.logger().Debugf("command context: %s", kuiCommandContext)
 	cmd.Env = append(cmd.Env, "KUI_COMMAND_CONTEXT=" + kuiCommandContext)
 
-	component.invokeRun(context, cmd, kaskArgs)
+	var style ExecStyle = ExecWithStart
+	arg := kaskArgs[0]
+	if arg == "install" || arg == "uninstall" || arg == "list" || arg == "version" || arg == "commands" {
+		if len(kaskArgs) == 1 || kaskArgs[1] != "--ui" {
+			context.logger().Debug("using headless mode")
+			cmd.Env = append(cmd.Env, "KUI_HEADLESS=true")
+			style = ExecWithRun
+		}
+	}
+
+	component.invokeRun(context, cmd, kaskArgs, style)
 }
 
-func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string) {
+func (component *KuiComponent) invokeRun(context Context, cmd *exec.Cmd, kaskArgs []string, style ExecStyle) {
 	cmd.Args = append(cmd.Args, kaskArgs...)
 	context.logger().Debugf("args %s", cmd.Args)
 
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
-	if err := cmd.Start(); err != nil {
-		fmt.Println("command failed!")
-	}
+	if style == ExecWithStart {
+		if err := cmd.Start(); err != nil {
+			fmt.Println("command failed!")
+		}
+	} else {
+		if err := cmd.Run(); err != nil {
+			fmt.Println("command failed!")
+		}
+	}		
 }
 
 func GetDistOSSuffix() string {
@@ -235,7 +269,7 @@ func (p *KuiComponent) DownloadDistIfNecessary(context Context, force bool) (*ex
 	basenameOfSelf := filepath.Base(executable)
 
 	command := GetRootCommand(extractedDir)
-	command.Env = append(os.Environ(), "KUI_BIN_DIR=" + binDir, "KUI_BIN_PREFIX=kubectl-", "KUI_BIN=" + executable, "KUI_DEFAULT_PRETTY_TYPE=" + basenameOfSelf)
+	command.Env = append(os.Environ(), "KUI_BIN_DIR=" + binDir, "KUI_BIN_PREFIX=kubectl-", "KUI_BIN_PREFIX_FOR_COMMANDS=kubectl", "KUI_BIN=" + executable, "KUI_DEFAULT_PRETTY_TYPE=" + basenameOfSelf)
 
 	if force {
 		err := os.Remove(successFile)
